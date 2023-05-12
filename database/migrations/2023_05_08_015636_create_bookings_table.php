@@ -16,6 +16,7 @@ class CreateBookingsTable extends Migration
         Schema::create('bookings', function (Blueprint $table) {
             $table->id();
             $table->string('user_id');
+            $table->string('village_id');
             $table->string('event_id');
             $table->boolean('accepted')->default(false);
             $table->enum('kids_status', [0, 1, 2, 3])->default(0);

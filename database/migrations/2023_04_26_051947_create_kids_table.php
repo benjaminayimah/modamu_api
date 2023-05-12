@@ -16,13 +16,11 @@ class CreateKidsTable extends Migration
         Schema::create('kids', function (Blueprint $table) {
             $table->id();
             $table->string('user_id');
-            $table->string('event_id')->nullable();
             $table->string('name');
             $table->string('photo')->nullable();
             $table->string('dob')->nullable();
             $table->string('gender')->nullable();
             $table->string('height')->nullable();
-            $table->enum('status', [0, 1, 2, 3])->default(0);
             $table->text('about')->nullable();
             $table->timestamps();
         });

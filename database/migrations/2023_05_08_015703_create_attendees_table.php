@@ -17,8 +17,12 @@ class CreateAttendeesTable extends Migration
             $table->id();
             $table->string('user_id');
             $table->string('event_id');
+            $table->string('village_id');
             $table->string('kid_id');
+            $table->boolean('accepted')->default(false);
+            $table->enum('status', [0, 1, 2, 3])->default(0);
             $table->string('security_code')->nullable();
+            $table->boolean('ended')->default(false);
             $table->timestamps();
         });
     }

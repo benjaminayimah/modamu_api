@@ -33,13 +33,41 @@ Route::apiResources([
     'sign-in' => 'API\AuthController',
     'temp-upload' => 'API\TempUploadController',
     'auth-user' => 'API\UserController',
-    'event' => 'API\EventController'
+    'event' => 'API\EventController',
+    'bookings' => 'API\BookingsController'
+]);
+Route::post('/check-in-kid', [
+    'uses' => 'API\BookingsController@CheckInKid'
+]);
+Route::post('/check-out-kid', [
+    'uses' => 'API\BookingsController@CheckOutKid'
+]);
+Route::post('/accept-this-attendee', [
+    'uses' => 'API\BookingsController@AcceptThisAttendee'
+]);
+Route::get('/parent-fetch-registered-event', [
+    'uses' => 'API\BookingsController@ParentFetchRegisteredEvents'
+]);
+Route::get('/parent-fetch-attendees', [
+    'uses' => 'API\BookingsController@ParentFetchAttendees'
+]);
+Route::get('/village-fetch-attendees', [
+    'uses' => 'API\BookingsController@VillageFetchAttendees'
+]);
+Route::get('/fetch-this-kid/{id}', [
+    'uses' => 'API\UserController@FetchThisKid'
+]);
+Route::post('/fetch-this-parent', [
+    'uses' => 'API\BookingsController@FetchThisParent'
+]);
+Route::post('/fetch-this-kid-and-parent', [
+    'uses' => 'API\BookingsController@FetchThisKidAndParent'
 ]);
 Route::get('/fetch-this-registered-event/{id}', [
     'uses' => 'API\EventController@FetchThisRegisteredEvent'
 ]);
 Route::post('/place-booking', [
-    'uses' => 'API\EventController@PlaceBooking'
+    'uses' => 'API\BookingsController@PlaceBooking'
 ]);
 Route::post('/get-nearby-events' , [
     'uses' => 'API\EventController@getNearByEvents',
@@ -56,6 +84,8 @@ Route::post('/fetch-this-event/{id}', [
 Route::post('/fetch-kids', [
     'uses' => 'API\UserController@fetchKids'
 ]);
+
+
 // Route::post('/add-new-event', [
 //     'uses' => 
 // ])

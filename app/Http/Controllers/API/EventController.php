@@ -110,6 +110,7 @@ class EventController extends Controller
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
+        $attendees = array();
         if ($user->access_level == 1) {
             $event = User::find($user->id)->getEvents()
                 ->where('id', $id)
@@ -117,18 +118,23 @@ class EventController extends Controller
             $images = User::find($user->id)->getImages()
                 ->where('event_id', $id)->get();
             $village = $user;
+            $attendees = DB::table('attendees')
+                ->join('kids', 'attendees.kid_id', '=', 'kids.id')
+                ->where(['attendees.village_id' => $user->id, 'attendees.accepted' => true])
+                ->select('kids.*', 'attendees.event_id')
+                ->get();
         }else {
             $event = DB::table('events')->where('id', $id)->first();
             $images = DB::table('images')->where('event_id', $id)->get();
             $village = DB::table('users')->where('id', $event->user_id)->first();
         }
-        $kids = DB::table('kids')->where('event_id', $id)->get();
         
         return response()->json([
             'event' => $event,
-            'kids' => $kids,
+            'attendees' => $attendees,
             'images' => $images,
-            'user' => $village
+            'user' => $village,
+
         ], 200);
     }
     public function addToGallery(Request $request, $event) {
@@ -180,37 +186,6 @@ class EventController extends Controller
             ], 500);
         }
     }
-    public function PlaceBooking(Request $request) {
-        if (! $user = JWTAuth::parseToken()->authenticate()) {
-            return response()->json(['status' => 'User not found!'], 404);
-        }
-        $kid_array = $request['selection'];
-        $event_id = $request['event_id'];
-        $parent_id = $user->id;
-        try {
-            $booking = new Booking();
-            $booking->user_id = $parent_id;
-            $booking->event_id = $event_id;
-            $booking->payment_type = 'cash';
-            $booking->save();
-            foreach ($kid_array as $id) {
-                $attendee = new Attendee();
-                $attendee->user_id = $parent_id;
-                $attendee->event_id = $event_id;
-                $attendee->kid_id = $id;
-                $attendee->save();
-            }
-            return response()->json([
-                'msg' => 'success'
-            ], 200);
-
-        } catch (\Throwable $th) {
-            return response()->json([
-                'title' => 'Error!',
-            ], 500);
-        }
-        
-    }
     public function FetchThisRegisteredEvent($id) {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
@@ -220,13 +195,14 @@ class EventController extends Controller
         ->where('event_id', $id)->first();
         $event = DB::table('events')->where('id', $id)->first();
         $attendees_ = User::find($user->id)->getAttendees()
-        ->where('event_id', $id)->get();
+        ->where('event_id', $id)
+        ->where('accepted', true)
+        ->get();
         foreach ($attendees_ as $kid) {
             $newKid = User::find($user->id)->getKids()
             ->where('id', $kid->kid_id)->first();
             array_push($attendees, $newKid);
         }
-        
         return response()->json([
             'event' => $event,
             'booking' => $booking,

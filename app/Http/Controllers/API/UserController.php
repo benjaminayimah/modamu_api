@@ -2,38 +2,38 @@
 
 namespace App\Http\Controllers\API;
 
-use App\Booking;
 use App\Event;
 use App\Http\Controllers\Controller;
-use App\Kid;
 use App\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class UserController extends Controller
 {
-    public function store(Request $request)
+    public function index()
     {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
+        // $registered = array();
         $attendees = array();
-        $registered = array();
         $events = array();
         $images = array();
         
         try {
-            if($user->access_level == 1) {
+            if($user->access_level == 1) { // Village user
                 $events = User::find($user->id)->getEvents;
                 $images = User::find($user->id)->getImages;
-            }elseif($user->access_level == 2) {
+                $attendees = DB::table('attendees')
+                    ->join('kids', 'attendees.kid_id', '=', 'kids.id')
+                    ->where(['attendees.village_id' => $user->id, 'attendees.accepted' => true])
+                    ->select('kids.*', 'attendees.event_id', 'attendees.status')
+                    ->get();
+            }elseif($user->access_level == 2) { //Parent user
                 $events_ = DB::table('events')
                 ->where('date', '=', Carbon::now()->toDateString())
-                // ->where('end_time', '>', Carbon::now()->toTimeString())
-                // ->where('start_time', '<', Carbon::now()->toTimeString())
                 ->get();
                 foreach ($events_ as $event) {
                     $images_ = DB::table('images')->where(['event_id' => $event->id])->first();
@@ -48,17 +48,16 @@ class UserController extends Controller
                         array_push($events, $newEvent);
                     }
                 }
-                $attendees = User::find($user->id)->getAttendees;
-                $registered_ = User::find($user->id)->getBookings;
-                foreach ($registered_ as $booking) {
-                    $reg_event = DB::table('events')->where('id', $booking->event_id)->first();
-                    $newRegistered = new Booking();
-                    $newRegistered->booking = $booking;
-                    $newRegistered->event = $reg_event;
-                    if(isset($newRegistered)){
-                        array_push($registered, $newRegistered);
-                    }
-                }
+                // $registered_ = User::find($user->id)->getBookings;
+                // foreach ($registered_ as $booking) {
+                //     $reg_event = DB::table('events')->where('id', $booking->event_id)->first();
+                //     $newRegistered = new Booking();
+                //     $newRegistered->booking = $booking;
+                //     $newRegistered->event = $reg_event;
+                //     if(isset($newRegistered)){
+                //         array_push($registered, $newRegistered);
+                //     }
+                // }
             }
             
             return response()->json([
@@ -66,7 +65,7 @@ class UserController extends Controller
                 'events' => $events,
                 'images' => $images,
                 'attendees' => $attendees,
-                'registered' => $registered
+                // 'registered' => $registered
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([

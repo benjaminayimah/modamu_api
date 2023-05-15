@@ -82,7 +82,7 @@ class AuthController extends Controller
             $updateUser->phone = $request['phone_number'];
             $updateUser->emergency_number = $request['emergency_number'];
             $updateUser->ocupation = $request['ocupation'];
-            $updateUser->address = $request['address'];
+            // $updateUser->address = $request['address'];
             if($newImage != null) {
                 if($newImage == $oldImage) {
                     // $updateUser->update();

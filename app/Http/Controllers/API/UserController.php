@@ -23,8 +23,23 @@ class UserController extends Controller
         $images = array();
         
         try {
+            $events_ = DB::table('events')
+            ->where('date', '=', Carbon::now()->toDateString())
+            ->get();
+            foreach ($events_ as $event) {
+                $images_ = DB::table('images')->where(['event_id' => $event->id])->first();
+                if(isset($images_)){
+                    array_push($images, $images_);
+                }
+                $village = DB::table('users')->where('id', $event->user_id)->first();
+                $newEvent = new Event();
+                $newEvent->event = $event;
+                $newEvent->village = $village->name;
+                if(isset($newEvent)){
+                    array_push($events, $newEvent);
+                }
+            }
             if($user->access_level == 1) { // Village user
-                $events = User::find($user->id)->getEvents;
                 $images = User::find($user->id)->getImages;
                 $attendees = DB::table('attendees')
                     ->join('kids', 'attendees.kid_id', '=', 'kids.id')
@@ -32,22 +47,7 @@ class UserController extends Controller
                     ->select('kids.*', 'attendees.event_id', 'attendees.status')
                     ->get();
             }elseif($user->access_level == 2) { //Parent user
-                $events_ = DB::table('events')
-                ->where('date', '=', Carbon::now()->toDateString())
-                ->get();
-                foreach ($events_ as $event) {
-                    $images_ = DB::table('images')->where(['event_id' => $event->id])->first();
-                    if(isset($images_)){
-                        array_push($images, $images_);
-                    }
-                    $village = DB::table('users')->where('id', $event->user_id)->first();
-                    $newEvent = new Event();
-                    $newEvent->event = $event;
-                    $newEvent->village = $village->name;
-                    if(isset($newEvent)){
-                        array_push($events, $newEvent);
-                    }
-                }
+                
                 // $registered_ = User::find($user->id)->getBookings;
                 // foreach ($registered_ as $booking) {
                 //     $reg_event = DB::table('events')->where('id', $booking->event_id)->first();

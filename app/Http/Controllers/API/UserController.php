@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Attendee;
 use App\Event;
 use App\Http\Controllers\Controller;
 use App\User;
@@ -23,41 +24,26 @@ class UserController extends Controller
         $images = array();
         
         try {
-            $events_ = DB::table('events')
-            ->where('date', '=', Carbon::now()->toDateString())
-            ->get();
-            foreach ($events_ as $event) {
-                $images_ = DB::table('images')->where(['event_id' => $event->id])->first();
-                if(isset($images_)){
-                    array_push($images, $images_);
-                }
-                $village = DB::table('users')->where('id', $event->user_id)->first();
-                $newEvent = new Event();
-                $newEvent->event = $event;
-                $newEvent->village = $village->name;
-                if(isset($newEvent)){
-                    array_push($events, $newEvent);
-                }
-            }
             if($user->access_level == 1) { // Village user
-                $images = User::find($user->id)->getImages;
-                $attendees = DB::table('attendees')
-                    ->join('kids', 'attendees.kid_id', '=', 'kids.id')
-                    ->where(['attendees.village_id' => $user->id, 'attendees.accepted' => true])
-                    ->select('kids.*', 'attendees.event_id', 'attendees.status')
+                $events = DB::table('events')
+                    ->join('users', 'events.user_id', '=', 'users.id')
+                    ->where('users.id', $user->id)
+                    ->select('users.name', 'users.image', 'events.*')
                     ->get();
+                $images = User::find($user->id)->getImages;
+                $attendees = (new Attendee)->villageAttendees($user->id, true);
             }elseif($user->access_level == 2) { //Parent user
-                
-                // $registered_ = User::find($user->id)->getBookings;
-                // foreach ($registered_ as $booking) {
-                //     $reg_event = DB::table('events')->where('id', $booking->event_id)->first();
-                //     $newRegistered = new Booking();
-                //     $newRegistered->booking = $booking;
-                //     $newRegistered->event = $reg_event;
-                //     if(isset($newRegistered)){
-                //         array_push($registered, $newRegistered);
-                //     }
-                // }
+                $events = DB::table('events')
+                    ->join('users', 'events.user_id', '=', 'users.id')
+                    ->where('events.date', '>=', Carbon::now()->toDateString())
+                    ->select('users.name', 'users.image', 'events.*')
+                    ->get();
+                foreach ($events as $event) {
+                    $images_ = DB::table('images')->where(['event_id' => $event->id])->first();
+                    if(isset($images_)){
+                        array_push($images, $images_);
+                    }
+                }
             }
             
             return response()->json([
@@ -90,6 +76,14 @@ class UserController extends Controller
                 'status' => 'Token error.'
             ], 500);
         }
+    }
+    public function villageAttendees($id) {
+        $attendees = DB::table('attendees')
+            ->join('kids', 'attendees.kid_id', '=', 'kids.id')
+            ->where(['attendees.village_id' => $id, 'attendees.accepted' => true])
+            ->select('attendees.*', 'kids.kid_name', 'kids.photo', 'kids.dob')
+        ->get();
+        return $attendees;
     }
     public function update(Request $request)
     {

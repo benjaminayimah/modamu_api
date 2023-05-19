@@ -20,11 +20,8 @@ class BookingsController extends Controller
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
-        $waitlist = DB::table('attendees')
-            ->join('kids', 'attendees.kid_id', '=', 'kids.id')
-            ->where(['attendees.village_id' => $user->id, 'attendees.accepted' => false])
-            ->select('kids.*', 'attendees.event_id', 'attendees.status')
-            ->get();
+        $waitlist = (new Attendee)->villageAttendees($user->id, false);
+
         return response()->json([
             'waitlist' => $waitlist,
         ], 200);
@@ -86,66 +83,36 @@ class BookingsController extends Controller
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
-        return response()->json([
-            'attendees' => $this->getAttendees($user->id),
-        ], 200);
-    }
-    public function getAttendees($user_id) {
-        $attendees = DB::table('attendees')
-            ->join('kids', 'attendees.kid_id', '=', 'kids.id')
-            ->where(['attendees.village_id' => $user_id, 'attendees.accepted' => true])
-            ->select('kids.*', 'attendees.event_id', 'attendees.status')
-            ->get();
-        return $attendees;
+        return response()->json((new Attendee)->villageAttendees($user->id, true), 200);
     }
     public function ParentFetchAttendees()
     {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
-        $attendees = DB::table('attendees')
-            ->join('kids', 'attendees.kid_id', '=', 'kids.id')
-            ->where(['attendees.user_id' => $user->id, 'attendees.accepted' => true])
-            ->select('kids.*', 'attendees.event_id', 'attendees.status', 'attendees.security_code')
-            ->get();
-        return response()->json([
-            'attendees' => $attendees,
-        ], 200);
+        return response()->json((new Attendee)->ParentAttendees($user->id, true), 200);
     }
     public function ParentFetchRegisteredEvents() {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
-        $registered = array();
-
-        $registered_ = User::find($user->id)->getBookings;
-        foreach ($registered_ as $booking) {
-            $reg_event = DB::table('events')->where('id', $booking->event_id)->first();
-            $newRegistered = new Booking();
-            $newRegistered->booking = $booking;
-            $newRegistered->event = $reg_event;
-            if(isset($newRegistered)){
-                array_push($registered, $newRegistered);
-            }
-        }
-
-        // $attendess = DB::table('attendees')
-        //     ->join('kids', 'attendees.kid_id', '=', 'kids.id')
-        //     ->join('bookings', 'attendees.event_id', '=', 'bookings.event_id')
-        //     ->where(['attendees.user_id' => $user->id, 'attendees.accepted' => false])
-        //     ->select('kids.*', 'attendees.event_id')
-        //     ->get();
-        return response()->json([
-            'registered' => $registered,
-        ], 200);
+        $registered = DB::table('bookings')
+            ->join('events', 'bookings.event_id', '=', 'events.id')
+            ->where('bookings.user_id', '=', $user->id)
+            ->select('events.*', 'bookings.accepted')
+            ->get();
+        return response()->json($registered, 200);
     }
     public function FetchThisKidAndParent(Request $request) {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
-        $kid_id = $request['kid'];
-        $parent_id = $request['parent'];
-        $event_id = $request['event'];
+        $attendee_id = $request['id'];
+        $attendee = Attendee::findOrFail($attendee_id);
+        $kid_id = $attendee->kid_id;
+        $parent_id = $attendee->user_id;
+        $event_id = $attendee->event_id;
+
         $kid = Kid::all()->where('id', $kid_id)->first();
         $parent = User::all()->where('id', $parent_id)->first();
         $event = Event::all()->where('id', $event_id)->first();
@@ -174,16 +141,12 @@ class BookingsController extends Controller
         $parent_id = $request['parent'];
         $event_id = $request['event'];
         $parent = User::all()->where('id', $parent_id)->first();
-        $kids = array();
 
-        $attendess = DB::table('attendees')
-            ->where('user_id', $parent_id)
-            ->where('event_id', $event_id)
-            ->get();
-        foreach ($attendess as $key => $value) {
-            $newKid = Kid::all()->where('id', $value->kid_id)->first();
-            array_push($kids, $newKid);
-        }
+        $kids = DB::table('attendees')
+            ->join('kids', 'attendees.kid_id', '=', 'kids.id')
+            ->where('attendees.user_id', $parent_id)
+            ->where('attendees.event_id', $event_id)
+        ->get();
         return response()->json([
             'parent' => $parent,
             'kids' => $kids
@@ -193,11 +156,9 @@ class BookingsController extends Controller
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
+        $id = $request['id'];
         try {
-            $attendee = Attendee::all()
-                ->where('kid_id', $request['kid'])
-                ->where('event_id', $request['event'])
-                ->first();
+            $attendee = Attendee::findOrFail($id);
             $attendee->accepted = true;
             $attendee->update();
             $booking = Booking::all()
@@ -208,9 +169,7 @@ class BookingsController extends Controller
                 $booking->accepted = true;
                 $booking->update();
             }
-            return response()->json([
-                'attendee' => $request['kid'],
-            ], 200);
+            return response()->json($attendee, 200);
         } catch (\Throwable $th) {
             return response()->json([
                 'title' => 'Error!'
@@ -222,12 +181,8 @@ class BookingsController extends Controller
             return response()->json(['status' => 'User not found!'], 404);
         }
         $id = $request['id'];
-        $event = $request['event'];
         try {
-            $attendee = Attendee::all()
-            ->where('kid_id', $id)
-            ->where('event_id', $event)
-            ->first();
+            $attendee = Attendee::findOrFail($id);
             $code = '';
             for ($i = 0; $i < 5; $i++) {
                 $code .= mt_rand(0, 9);
@@ -236,18 +191,14 @@ class BookingsController extends Controller
             $attendee->security_code = $code;
             $attendee->update();
             $booking = Booking::all()
-            ->where('event_id', $event)
-            ->where('user_id', $attendee->user_id)
-            ->first();
+                ->where('event_id', $attendee->event_id)
+                ->where('user_id', $attendee->user_id)
+                ->first();
             if($booking->kids_status == '0') {
                 $booking->kids_status = '2';
                 $booking->update();
             }
-            if($user->access_level == 1) {//village
-                return response()->json($this->getKid($user->id, $id), 200);
-            }else {
-                return response()->json($this->getKidParent($user->id, $id), 200);
-            }
+            return response()->json($this->getKid($id), 200);
         } catch (\Throwable $th) {
             return response()->json([
                 'title' => 'Error!'
@@ -263,30 +214,21 @@ class BookingsController extends Controller
             'checkout_code' => 'required'
         ]);
         $id = $request['id'];
-        $event = $request['event'];
         $code = $request['checkout_code'];
         try {
-            $attendee = Attendee::all()
-            ->where('kid_id', $id)
-            ->where('event_id', $event)
-            ->first();
+            $attendee = Attendee::findOrFail($id);
             if($code == $attendee->security_code) {
                 $attendee->status = '3';
                 $attendee->update();
                 $booking = Booking::all()
-                ->where('event_id', $event)
-                ->where('user_id', $attendee->user_id)
-                ->first();
+                    ->where('event_id', $attendee->event_id)
+                    ->where('user_id', $attendee->user_id)
+                    ->first();
                 if($booking->kids_status != '3') {
                     $booking->kids_status = '3';
                     $booking->update();
                 }
-                if($user->access_level == 1) {//village
-                    return response()->json($this->getKid($user->id, $id), 200);
-                }else {
-                    return response()->json($this->getKidParent($user->id, $id), 200);
-                }
-                
+                return response()->json($this->getKid($id), 200);
             }else {
                 return response()->json([
                     'error' => true,
@@ -301,30 +243,14 @@ class BookingsController extends Controller
             ], 500);
         }
     }
-    public function getKid($user_id, $id) {
+    public function getKid($id) {
         $kid = DB::table('attendees')
             ->join('kids', 'attendees.kid_id', '=', 'kids.id')
-            ->where(['attendees.village_id' => $user_id, 'attendees.kid_id' => $id])
-            ->select('kids.*', 'attendees.event_id', 'attendees.status' )
+            ->where('attendees.id', $id)
+            ->select('attendees.*', 'kids.kid_name', 'kids.photo', 'kids.dob', 'kids.gender')
             ->first();
         return $kid;
     }
-    public function getKidParent($user_id, $id) {
-        $kid = DB::table('attendees')
-            ->join('kids', 'attendees.kid_id', '=', 'kids.id')
-            ->where(['attendees.user_id' => $user_id, 'attendees.kid_id' => $id])
-            ->select('kids.*', 'attendees.event_id', 'attendees.status', 'attendees.security_code' )
-            ->first();
-        return $kid;
-    }
-
-    // $attendees = DB::table('attendees')
-    //         ->join('kids', 'attendees.kid_id', '=', 'kids.id')
-    //         ->where(['attendees.user_id' => $user_id, 'attendees.kid_id' => $id])
-    //         ->select('kids.*', 'attendees.event_id', 'attendees.status', 'attendees.security_code')
-    //         ->get();
-
-
     public function store(Request $request)
     {
         //

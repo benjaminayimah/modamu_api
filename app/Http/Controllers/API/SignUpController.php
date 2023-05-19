@@ -95,7 +95,7 @@ class SignUpController extends Controller
         $id = $user->id;
         try {
             $kid = new Kid();
-            $kid->name = $request['name'];
+            $kid->kid_name = $request['name'];
             $kid->photo = $request['tempImage'];
             $kid->gender = $request['gender'];
             $kid->height = $request['height'];

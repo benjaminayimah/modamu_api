@@ -36,6 +36,10 @@ Route::apiResources([
     'event' => 'API\EventController',
     'bookings' => 'API\BookingsController'
 ]);
+
+Route::get('/village-user-fetch-events', [
+    'uses' => 'API\EventController@villageUserFetchEvents'
+]);
 Route::post('/check-in-kid', [
     'uses' => 'API\BookingsController@CheckInKid'
 ]);

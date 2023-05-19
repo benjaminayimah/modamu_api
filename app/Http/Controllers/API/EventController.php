@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\API;
 
 use App\Attendee;
-use App\Booking;
 use App\Event;
 use App\Http\Controllers\Controller;
 use App\Image;
@@ -60,6 +59,7 @@ class EventController extends Controller
         $this->validate($request, [
             'event_name' => 'required',
             'date' => 'required',
+            'description' => 'required',
             'tempImage' => 'required',
             'start_time' => 'required',
             'end_time' => 'required',
@@ -71,7 +71,7 @@ class EventController extends Controller
             $event_image = $request['tempImage'];
             $id = $user->id;
             $newevent = new Event();
-            $newevent->name = $request['event_name'];
+            $newevent->event_name = $request['event_name'];
             $newevent->user_id = $id;
             $newevent->address = $address;
             $newevent->latitude = $latitude;
@@ -111,30 +111,22 @@ class EventController extends Controller
             return response()->json(['status' => 'User not found!'], 404);
         }
         $attendees = array();
-        if ($user->access_level == 1) {
-            $event = User::find($user->id)->getEvents()
-                ->where('id', $id)
-                ->first();
+        $event = DB::table('events')
+            ->join('users', 'events.user_id', '=', 'users.id')
+            ->where('events.id', $id)
+            ->select('users.name', 'events.*')
+        ->first();
+        if ($user->access_level == 1) { //village --owner
             $images = User::find($user->id)->getImages()
                 ->where('event_id', $id)->get();
-            $village = $user;
-            $attendees = DB::table('attendees')
-                ->join('kids', 'attendees.kid_id', '=', 'kids.id')
-                ->where(['attendees.village_id' => $user->id, 'attendees.accepted' => true])
-                ->select('kids.*', 'attendees.event_id')
-                ->get();
-        }else {
-            $event = DB::table('events')->where('id', $id)->first();
+            $attendees = (new Attendee)->villageAttendees($user->id, true);
+        }else { //guest
             $images = DB::table('images')->where('event_id', $id)->get();
-            $village = DB::table('users')->where('id', $event->user_id)->first();
         }
-        
         return response()->json([
             'event' => $event,
             'attendees' => $attendees,
             'images' => $images,
-            'user' => $village,
-
         ], 200);
     }
     public function addToGallery(Request $request, $event) {
@@ -193,22 +185,45 @@ class EventController extends Controller
         $attendees = array();
         $booking = User::find($user->id)->getBookings()
         ->where('event_id', $id)->first();
+
         $event = DB::table('events')->where('id', $id)->first();
-        $attendees_ = User::find($user->id)->getAttendees()
-        ->where('event_id', $id)
-        ->where('accepted', true)
+
+        $attendees = DB::table('attendees')
+            ->join('kids', 'attendees.kid_id', '=', 'kids.id')
+            ->where(['attendees.user_id' => $user->id, 'attendees.event_id' => $id, 'attendees.accepted' => true])
+            ->select('kids.kid_name', 'kids.user_id', 'kids.photo')
         ->get();
-        foreach ($attendees_ as $kid) {
-            $newKid = User::find($user->id)->getKids()
-            ->where('id', $kid->kid_id)->first();
-            array_push($attendees, $newKid);
-        }
         return response()->json([
             'event' => $event,
             'booking' => $booking,
             'attendees' => $attendees
         ], 200);
     }
+    public function villageUserFetchEvents() {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        $events = DB::table('events')
+            ->join('users', 'events.user_id', '=', 'users.id')
+            ->where('users.id', $user->id)
+            ->select('users.name', 'users.image', 'events.*')
+            ->get();
+        $images = User::find($user->id)->getImages;
+        $attendees = (new Attendee)->villageAttendees($user->id, true);
+        return response()->json([
+            'events' => $events,
+            'images' => $images,
+            'attendees' => $attendees
+        ], 200);
+    }
+    // public function villageAttendees($id) {
+    //     $attendees = DB::table('attendees')
+    //         ->join('kids', 'attendees.kid_id', '=', 'kids.id')
+    //         ->where(['attendees.village_id' => $id, 'attendees.accepted' => true])
+    //         ->select('attendees.*', 'kids.kid_name', 'kids.photo', 'kids.dob')
+    //     ->get();
+    //     return $attendees;
+    // }
 
     /**
      * Update the specified resource in storage.

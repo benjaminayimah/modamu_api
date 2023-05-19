@@ -16,7 +16,7 @@ class CreateKidsTable extends Migration
         Schema::create('kids', function (Blueprint $table) {
             $table->id();
             $table->string('user_id');
-            $table->string('name');
+            $table->string('kid_name');
             $table->string('photo')->nullable();
             $table->string('dob')->nullable();
             $table->string('gender')->nullable();

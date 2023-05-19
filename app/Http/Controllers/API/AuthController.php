@@ -151,8 +151,6 @@ class AuthController extends Controller
             'message' => 'Password is updated'
         ], 200);
     }
-
-    
     public function destroy()
     {
         if (! $user = JWTAuth::parseToken()->authenticate()) {

@@ -87,7 +87,8 @@ class SignUpController extends Controller
     {
         $this->validate($request, [
             'name' => 'required',
-            'gender' => 'required'
+            'gender' => 'required',
+            'dob' => 'required'
         ]);
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);

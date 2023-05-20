@@ -68,7 +68,7 @@ class BookingsController extends Controller
             }
             return response()->json([
                 'title' => 'Successful!',
-                'msg' => 'Thank you for booking this event.Please monitor your response and track your kids by clicking on the  \'Track event\' button bellow.'
+                'msg' => 'Thank you for booking this event. Monitor your response and track your kids by clicking on the  \'Track event\' button bellow.'
             ], 200);
 
         } catch (\Throwable $th) {

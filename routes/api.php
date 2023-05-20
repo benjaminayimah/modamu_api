@@ -34,9 +34,14 @@ Route::apiResources([
     'temp-upload' => 'API\TempUploadController',
     'auth-user' => 'API\UserController',
     'event' => 'API\EventController',
-    'bookings' => 'API\BookingsController'
+    'bookings' => 'API\BookingsController',
+    'forgot-password' => 'API\ForgotPasswordController',
+    'send-chat' => 'API\ChatController'
 ]);
 
+Route::post('/do-reset-password', [
+    'uses' => 'API\ForgotPasswordController@ResetPassword'
+]);
 Route::get('/village-user-fetch-events', [
     'uses' => 'API\EventController@villageUserFetchEvents'
 ]);

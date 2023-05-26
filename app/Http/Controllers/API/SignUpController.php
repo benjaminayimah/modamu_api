@@ -2,12 +2,18 @@
 
 namespace App\Http\Controllers\API;
 
+use App\Email;
 use App\User;
 use App\Http\Controllers\Controller;
 use App\Kid;
+use App\Mail\WelcomeEmail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Crypt;
+use Illuminate\Support\Facades\Mail;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Contracts\Encryption\DecryptException;
+use Illuminate\Support\Facades\DB;
 
 class SignUpController extends Controller
 {
@@ -30,31 +36,38 @@ class SignUpController extends Controller
             'password' => 'required|min:6',
         ]);
         try {
+            $email = $request['email'];
+            $name = $request['name'];
             $newuser = new User();
-            $newuser->name = $request['name'];
-            $newuser->email = $request['email'];
+            $newuser->name = $name;
+            $newuser->email = $email;
             $newuser->password = bcrypt($request['password']);
             $newuser->save();
             $token = $this->signInUser($request);
+            // $this->sendMail($email, $name);
+            return response()->json([
+                'name' => $newuser->name,
+                'email' => $newuser->email,
+                'id' => $newuser->id,
+                'state' => 2,
+                'heading' => 'Now lets get to know about you',
+                'sub_heading' => 'Tell us a bit about yourself',
+                'footer' => 'Getting to know you',
+                'progress' => 50,
+                'remember_token' => $token,
+            ], 200);
  
         } catch (\Throwable $th) {
             $this->errorMsg();
         }
-        return response()->json([
-            'name' => $newuser->name,
-            'email' => $newuser->email,
-            'id' => $newuser->id,
-            'state' => 2,
-            'heading' => 'Now lets get to know about you',
-            'sub_heading' => 'Tell us a bit about yourself',
-            'footer' => 'Getting to know you',
-            'progress' => 50,
-            'remember_token' => $token,
-        ], 200);
     }
-    // public function progressResponse() {
-        
-    // }
+    public function sendMail($email, $name){
+        $token = Crypt::encryptString($email);
+        $data = new Email();
+        $data->name = $name;
+        $data->url = 'https://staging.d3u9u5xg4yg53c.amplifyapp.com/account-activation/'.$token;
+        Mail::to($email)->send(new WelcomeEmail($data));
+    }
     public function parentDetails(Request $request)
     {
         $this->validate($request, [
@@ -148,6 +161,22 @@ class SignUpController extends Controller
             'title' => 'Error!',
             'status' => 'Could not create user.'
         ], 500);
+    }
+
+    public function VerifyAccount(Request $request)
+    {
+        try {
+            $email = Crypt::decryptString($request['token']);
+            $validated = DB::table('users')->where('email', $email)->first();
+            if(isset($validated)) {
+                $user = User::whereEmail($validated->email)->first();
+                $user->email_verified = true;
+                $user->update();
+            }
+            return response()->json($email, 200);
+        } catch (DecryptException $e) {
+            return response()->json( $e, 401);
+        }
     }
     
     public function update(Request $request, $id)

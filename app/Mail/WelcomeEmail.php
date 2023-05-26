@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class PasswordReset extends Mailable
+class WelcomeEmail extends Mailable
 {
     use Queueable, SerializesModels;
     public $data;
@@ -29,9 +29,9 @@ class PasswordReset extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.passwordReset')->with([
+        return $this->view('emails.welcomeEmail')->with([
             'url' => $this->data->url,
-            'hideme' => $this->data->hideme
+            'name' => $this->data->name
         ]);
     }
 }

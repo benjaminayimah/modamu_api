@@ -19,3 +19,6 @@ Route::get('/', function () {
 Route::get('/reset-password', function () {
     return view('emails.passwordReset');
 });
+Route::get('/welcome-email', function () {
+    return view('emails.welcomeEmail');
+});

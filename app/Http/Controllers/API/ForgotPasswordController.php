@@ -27,10 +27,11 @@ class ForgotPasswordController extends Controller
         try {
             $email = $request['email'];
             if($this->validateEmail($email)) {
-                // $this->sendMail($email);
+                $token = $this->storeToken($email);
+                $this->sendMail($token, $email);
                 return response()->json([
                     'title' => 'Successful',
-                    'email' => $email,
+                    'email' => $token,
                 ], 200);
             }else {
                 return response()->json([
@@ -41,7 +42,7 @@ class ForgotPasswordController extends Controller
             
         } catch (\Throwable $th) {
             return response()->json([
-                'title' => 'Error!',
+                'title' => $th,
             ], 500);
         }
     }
@@ -51,25 +52,10 @@ class ForgotPasswordController extends Controller
         return true;
         else return false;
     }
-    public function encrypt($email) {
-        $user = new User();
-        $user->email = $email;
-        $user->expires = Carbon::now()->addDays(1);
-        return Crypt::encryptString($user);
-    }
-    public function sendMail($email){
-        $token = $this->encrypt($email);
-        $this->storeToken($token, $email);
-        $data = new Email();
-        $data->title = 'Reset your Password';
-        $data->token = $token;
-        $data->email = $email;
-        $data->hideme = Carbon::now();
-        Mail::to($email)->send(new PasswordReset($data));
-    }
-    public function storeToken($token, $email){
-        $findUser = DB::table('password_resets')->where('email', $email)->first();
-        if(isset($isOtherToken)) {
+    public function storeToken($email){
+        $token = Crypt::encryptString($email);
+        $findUser = DB::table('password_resets')->where('email', $email);
+        if(isset($findUser)) {
             $findUser->delete();
         }
         DB::table('password_resets')->insert([
@@ -77,67 +63,73 @@ class ForgotPasswordController extends Controller
             'token' => $token,
             'created_at' => Carbon::now()            
         ]);
+        return $token;
     }
+    public function sendMail($token, $email){
+        $data = new Email();
+        $data->url = 'https://staging.d3u9u5xg4yg53c.amplifyapp.com/reset-password/'.$token;
+        $data->hideme = Carbon::now();
+        Mail::to($email)->send(new PasswordReset($data));
+    }
+
+    //Reset----------
+
     public function ResetPassword(Request $request)
     {
         $this->validate($request, [
-            'new_password' => 'required|confirmed|min:6',
+            'password' => 'required|confirmed|min:6',
         ]);
-        try {
-            $user = $this->decryptToken($request['token']);
-            $this->verifyUser($user);
-        } catch (\Throwable $th) {
-            return response()->json([
-                'title' => 'Error!',
-            ], 500);
-        }
+        $email = $this->decryptToken($request['token']);
+        return $email ? $this->doResetPassword($email, $request['password']) : $this->tokenException();
     }
-    public function decryptToken($token) {
+    public function decryptToken ($token) {
         try {
-            return Crypt::decryptString($token);
+            $email = Crypt::decryptString($token);
+            if($email) {
+                $validated = DB::table('password_resets')->where('email', $email)->first();
+                if(isset($validated)) {
+                    return $email;
+                }else {
+                    return false;
+                }
+            }
         } catch (DecryptException $e) {
-            $this->errorHandler();
+            return false;
         }
     }
-    public function errorHandler() {
+    public function tokenException() {
         return response()->json([
             'title' => 'Error!',
             'message' => 'Your token is invalid. Please try resending a new \'forgot password\' link.'
         ], 401);
     }
-    private function verifyUser($this_user){
-        $user = DB::table('password_resets')->where([
-            'email' => $this_user->email
-        ]);
-        // $userToken = $this->decryptToken($user->token);
-    }
-    // private function tokenNotFoundError() {
-    //     return response()->json([
-    //         'title' => 'Error!',
-    //         'message' => 'Your token is invalid. Please try resending a new \'forgot password\' link.'
-    //     ], 401);
-    // }
-    private function doResetPassword($request) {
-        $userData = User::whereEmail($request->email)->first();
+    private function doResetPassword($email, $password) {
+        $userData = User::whereEmail($email)->first();
         $userData->update([
-            'password'=>bcrypt($request->password)
+            'password' => bcrypt($password)
         ]);
-        $this->updatePasswordRow($request)->delete();
-        return response()->json([
-            'title' => 'Successful',
-            'message' => 'Your password has been reset. Proceed to sign in with your new password.'
-        ], 200);
+        DB::table('password_resets')->where('email', $email)->delete();
+        return response()->json($email, 200);
     }
-    // public function SignInUser($request) {
-    //     $credentials = $request->only('email', 'password');
-    //     if( !$token = JWTAuth::attempt($credentials)) {
-    //         return '';
+   
+    // private function verifyUser($this_user){
+    //     return response()->json($this_user, 200);
+
+    //     $findUser = DB::table('password_resets')->where([
+    //         'email' => $this_user->email
+    //     ]);
+    //     if(isset($user)) {
+    //         if( Carbon::now() > $this_user->expires) {
+    //             return response()->json([
+    //                 'title' => 'Error!',
+    //                 'message' => 'Your token has expired. Please resend a new \'forgot password\' link.'
+    //             ], 401);
+    //         }
+    //     }else {
+    //         $this->doResetPassword($this_user->email);
     //     }
-    //     return $token;
     // }
 
-
-   
     public function destroy($id)
     {
         //

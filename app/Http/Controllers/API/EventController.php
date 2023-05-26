@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\API;
 
 use App\Attendee;
+use App\Booking;
 use App\Event;
 use App\Http\Controllers\Controller;
 use App\Image;
@@ -114,7 +115,7 @@ class EventController extends Controller
         $event = DB::table('events')
             ->join('users', 'events.user_id', '=', 'users.id')
             ->where('events.id', $id)
-            ->select('users.name', 'events.*')
+            ->select('users.name', 'users.image', 'events.*')
         ->first();
         if ($user->access_level == 1) { //village --owner
             $images = User::find($user->id)->getImages()
@@ -215,6 +216,15 @@ class EventController extends Controller
             'images' => $images,
             'attendees' => $attendees
         ], 200);
+    }
+
+    public function DeleteRegisteredFinishedEvent($id) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        $registered = Booking::findOrFail($id);
+        $registered->delete();
+        return response()->json($id, 200);
     }
     // public function villageAttendees($id) {
     //     $attendees = DB::table('attendees')

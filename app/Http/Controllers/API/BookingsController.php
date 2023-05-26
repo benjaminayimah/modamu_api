@@ -7,11 +7,13 @@ use App\Booking;
 use App\Event;
 use App\Http\Controllers\Controller;
 use App\Kid;
+use App\Message;
 use App\User;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\DB;
-
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
+use UnexpectedValueException;
 
 class BookingsController extends Controller
 {
@@ -26,57 +28,190 @@ class BookingsController extends Controller
             'waitlist' => $waitlist,
         ], 200);
     }
-    public function PlaceBooking(Request $request) {
+    public function MakePayment(Request $request) {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
-        $kid_array = $request['selection'];
         $event_id = $request['event_id'];
+        $event = Event::all()->where('id', $event_id)->first();
+        $kid_array = $request['selection'];
         $village_id = $request['village'];
         $parent_id = $user->id;
+        $quantity = count($kid_array);
+        $amount = $event->amount;
+        $total_amount = $quantity * $amount;
+        $name = 'Paying for the event: '.$event->event_name;
         try {
-            $checkRegistered = Booking::all()
-            ->where('event_id', $event_id)
-            ->where('user_id', $user->id)
-            ->first();
-            if(!isset($checkRegistered)) {
-                $booking = new Booking();
-                $booking->user_id = $parent_id;
-                $booking->event_id = $event_id;
-                $booking->village_id = $village_id;
-                $booking->payment_type = 'cash';
-                $booking->save();
-            }
+            //make payment
+            \Stripe\Stripe::setApiKey(config('stripe.sk'));
+            $session = \Stripe\Checkout\Session::create([
+                'line_items' => [[
+                'price_data' => [
+                    'currency' => 'usd',
+                    'product_data' => [
+                    'name' => $name,
+                    ],
+                    'unit_amount' => $total_amount * 100,
+                ],
+                'quantity' => 1,
+                ]],
+                'mode' => 'payment',
+                'success_url' => $request['url'].'/success/{CHECKOUT_SESSION_ID}',
+                'cancel_url' => $request['url'].'/canceled/{CHECKOUT_SESSION_ID}',
+            ]);
+            //place temp booking
+            $booking = new Booking();
+            $booking->user_id = $parent_id;
+            $booking->village_id = $village_id;
+            $booking->event_id = $event_id;
+            $booking->event_name = $event->event_name;
+            $booking->number_of_kids = $quantity;
+            $booking->amount_per_child = $amount;
+            $booking->total_amount = $total_amount;
+            $booking->payment_session_id = $session->id;
+            $booking->payment_type = 'card';
+            $booking->save();
             foreach ($kid_array as $id) {
-                $checkRegAttendee = Attendee::all()
-                ->where('kid_id', $id)
-                ->where('event_id', $event_id)
-                ->first();
-                if(!isset($checkRegAttendee)) {
-                    $attendee = new Attendee();
-                    $attendee->user_id = $parent_id;
-                    $attendee->village_id = $village_id;
-                    $attendee->event_id = $event_id;
-                    $attendee->kid_id = $id;
-                    $attendee->save();
-                }else {
-                    return response()->json([
-                        'title' => 'Already registerd!',
-                        'msg' => 'Your kid was already registered for this event. Click on the \'Track event\' button bellow to see the status of their registration.'
-                    ], 200);
-                }
+                $attendee = new Attendee();
+                $attendee->user_id = $parent_id;
+                $attendee->booking_id = $booking->id;
+                $attendee->village_id = $village_id;
+                $attendee->event_id = $event_id;
+                $attendee->kid_id = $id;
+                $attendee->save();
             }
-            return response()->json([
-                'title' => 'Successful!',
-                'msg' => 'Thank you for booking this event. Monitor your response and track your kids by clicking on the  \'Track event\' button bellow.'
-            ], 200);
+            return response()->json($session->url, 200);
 
         } catch (\Throwable $th) {
             return response()->json([
                 'title' => 'Error!',
             ], 500);
         }
-        
+    }
+    public function CompleteBooking(Request $request)
+    {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        try {
+            $session_id = $request->session_id;
+            \Stripe\Stripe::setApiKey(config('stripe.sk'));
+            $session = \Stripe\Checkout\Session::retrieve($session_id);
+            if(!$session) {
+                throw new NotFoundHttpException();
+            }
+            $booking = Booking::where('payment_session_id', $session_id)->first();
+            if(!$booking) {
+                throw new NotFoundHttpException();
+            }
+            if(!$booking->paid) {
+                $booking->paid = true;
+                $booking->update();
+            }
+            return response()->json('success', 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'title' => 'Error!',
+            ], 500);
+        }
+    }
+    public function CancelBooking(Request $request)
+    {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        try {
+            $session_id = $request->session_id;
+            \Stripe\Stripe::setApiKey(config('stripe.sk'));
+            $session = \Stripe\Checkout\Session::retrieve($session_id);
+            if($session) {
+                $booking = Booking::where('payment_session_id', $session_id)
+                ->where('paid', false)->first();
+                if($booking) {
+                    $booking->delete();
+                }
+            }
+            return response()->json('success', 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'title' => 'Error!',
+            ], 500);
+        }
+    }
+    public function WebHooks()
+    {
+        $endpoint_secret = config('stripe.wh');
+        $payload = @file_get_contents('php://input');
+        $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
+        $event = null;
+        try {
+        $event = \Stripe\Webhook::constructEvent(
+            $payload, $sig_header, $endpoint_secret
+        );
+        } catch(\UnexpectedValueException $e) {
+            return response('', 400);
+        exit();
+        } catch(\Stripe\Exception\SignatureVerificationException $e) {
+            return response('', 400);
+        }
+        // Handle the event
+        switch ($event->type) {
+        case 'checkout.session.completed':
+            $session = $event->data->object;
+            $session_id = $session->id;
+            $booking = Booking::where('payment_session_id', $session_id)->first();
+            if($booking && !$booking->paid) {
+                $booking->paid = true;
+                $booking->update();
+                //send email to user, village and admin
+            }
+        case 'checkout.session.expired':
+            $session = $event->data->object;
+            $session_id = $session->id;
+            $booking = Booking::where('payment_session_id', $session_id)
+                ->where('paid', false)->first();
+                if($booking) {
+                    $booking->delete();
+                    //send email to user, village and admin
+                }
+        default:
+            echo 'Received unknown event type ' . $event->type;
+        }
+        return response('', 200);
+    }
+    public function WebHookCanceled()
+    {
+        // This is your Stripe CLI webhook secret for testing your endpoint locally.
+        $endpoint_secret = config('stripe.whc');
+        $payload = @file_get_contents('php://input');
+        $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
+        $event = null;
+
+        try {
+            $event = \Stripe\Webhook::constructEvent(
+            $payload, $sig_header, $endpoint_secret
+        );
+        } catch(\UnexpectedValueException $e) {
+            return response('', 400);
+        } catch(\Stripe\Exception\SignatureVerificationException $e) {
+            return response('', 400);
+        }
+        // Handle the event
+        switch ($event->type) {
+        case 'checkout.session.expired':
+            $session = $event->data->object;
+            $session_id = $session->id;
+            $booking = Booking::where('payment_session_id', $session_id)
+                ->where('paid', false)->first();
+                if($booking) {
+                    $booking->delete();
+                    //send email to user, village and admin
+                }
+        // ... handle other event types
+        default:
+            echo 'Received unknown event type ' . $event->type;
+        }
+        return response('', 200);
     }
     public function VillageFetchAttendees()
     {
@@ -138,18 +273,29 @@ class BookingsController extends Controller
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
+        $chats = array();
+        $message_id = 0;
         $parent_id = $request['parent'];
         $event_id = $request['event'];
         $parent = User::all()->where('id', $parent_id)->first();
-
         $kids = DB::table('attendees')
             ->join('kids', 'attendees.kid_id', '=', 'kids.id')
             ->where('attendees.user_id', $parent_id)
             ->where('attendees.event_id', $event_id)
         ->get();
+        $message = DB::table('messages')
+            ->where('to', $parent_id)
+            ->where('user_id', $user->id)
+            ->first();
+        if(isset($message)) {
+            $chats = Message::find($message->id)->getChats;
+            $message_id = $message->id;
+        }
         return response()->json([
             'parent' => $parent,
-            'kids' => $kids
+            'kids' => $kids,
+            'chats' => $chats,
+            'message_id' => $message_id
         ], 200);
     }
     public function AcceptThisAttendee(Request $request) {
@@ -274,6 +420,11 @@ class BookingsController extends Controller
      */
     public function destroy($id)
     {
-        //
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        $attendee = Attendee::findOrFail($id);
+        $attendee->delete();
+        return response()->json($id, 200);
     }
 }

@@ -16,6 +16,7 @@ class CreateAttendeesTable extends Migration
         Schema::create('attendees', function (Blueprint $table) {
             $table->id();
             $table->string('user_id');
+            $table->string('booking_id');
             $table->string('event_id');
             $table->string('village_id');
             $table->string('kid_id');

@@ -26,24 +26,24 @@
                                     </p>
                                     <div style="padding: 12px 0">
                                         <span style="color: #0173FF; padding-bottom: 6px; font-weight: 600; font-size: 25px; display:inline-block">
-                                            Reset your Password
+                                            You're welcome on board!
                                         </span>
                                     </div>
                                     <div style="color: rgb(34, 34, 34);">
                                         <p>
-                                            <strong>Hello,</strong>
+                                            <strong>Hello, {{ $name }}</strong>
                                         </p>
                                         <p>
-                                            You have requested a password reset. Simply click on the button below to continue.
+                                            We're excited to have you on board our platform. In order to get started, please confirm your email by clicking on the 'verify account' button below.
                                         </p>
                                         <p>
-                                            <a href="{{ $url }}" target="_blank" class="btn" style="background-color: #0173FF; border-radius: 18px; text-align: center; color:#fff; display:block; padding: 14px 24px; text-decoration: none; margin: 32px 24px">Set a new password</a>
+                                            <a href="{{ $url }}" target="_blank" class="btn" style="background-color: #0173FF; border-radius: 18px; text-align: center; color:#fff; display:block; padding: 14px 24px; text-decoration: none; margin: 32px 24px">Verify account</a>
                                         </p>
                                         <p>
-                                            Please ignore this message if you did not request a password reset. Your current password will still work.
+                                            We can't wait to assist you create fun experience for your kids while you unwind, relax, and recharge.
                                         </p>
                                         <p style="margin-top: 32px">
-                                            Thank you!<br/>
+                                            Best regards!<br/>
                                             Modamu Team.
                                         </p>
                                     </div>
@@ -57,7 +57,6 @@
                                         <p>
                                             <div>© 2023 Modamu. All Rights Reserved.</div>
                                         </p>
-                                        <span style="opacity: 0">{{ $hideme }} </span>
                                     </div>
                                 </div>
                             </td>

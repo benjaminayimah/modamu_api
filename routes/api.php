@@ -39,6 +39,31 @@ Route::apiResources([
     'send-chat' => 'API\ChatController'
 ]);
 
+Route::post('/booking-webhooks', [
+    'uses' => 'API\BookingsController@WebHooks'
+]);
+Route::post('/complete-booking', [
+    'uses' => 'API\BookingsController@CompleteBooking'
+]);
+Route::post('/cancel-booking', [
+    'uses' => 'API\BookingsController@CancelBooking'
+]);
+
+Route::post('/verify-account', [
+    'uses' => 'API\SignUpController@VerifyAccount'
+]);
+// Route::post('/make-payment', [
+//     'uses' => 'API\StripeController@CheckOut'
+// ]);
+Route::delete('/delete-registered-finish-event/{id}', [
+    'uses' => 'API\EventController@DeleteRegisteredFinishedEvent'
+]);
+Route::post('/fetch-this-chats/{id}', [
+    'uses' => 'API\ChatController@FetchThisChats'
+]);
+Route::get('/fetch-messages', [
+    'uses' => 'API\ChatController@fetchMessages'
+]);
 Route::post('/do-reset-password', [
     'uses' => 'API\ForgotPasswordController@ResetPassword'
 ]);
@@ -75,8 +100,8 @@ Route::post('/fetch-this-kid-and-parent', [
 Route::get('/fetch-this-registered-event/{id}', [
     'uses' => 'API\EventController@FetchThisRegisteredEvent'
 ]);
-Route::post('/place-booking', [
-    'uses' => 'API\BookingsController@PlaceBooking'
+Route::post('/make-payment', [
+    'uses' => 'API\BookingsController@MakePayment'
 ]);
 Route::post('/get-nearby-events' , [
     'uses' => 'API\EventController@getNearByEvents',

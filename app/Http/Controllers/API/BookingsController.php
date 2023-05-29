@@ -23,7 +23,6 @@ class BookingsController extends Controller
             return response()->json(['status' => 'User not found!'], 404);
         }
         $waitlist = (new Attendee)->villageAttendees($user->id, false);
-
         return response()->json([
             'waitlist' => $waitlist,
         ], 200);
@@ -130,6 +129,10 @@ class BookingsController extends Controller
                 if($booking) {
                     $booking->delete();
                 }
+                $attendees = Attendee::where('booking_id', $booking->id)->get();
+                foreach ($attendees as $attendee) {
+                    $attendee->delete();
+                }
             }
             return response()->json('success', 200);
         } catch (\Throwable $th) {
@@ -165,49 +168,19 @@ class BookingsController extends Controller
                 $booking->update();
                 //send email to user, village and admin
             }
-        case 'checkout.session.expired':
+        case 'checkout.session.async_payment_failed': //or expired
             $session = $event->data->object;
             $session_id = $session->id;
             $booking = Booking::where('payment_session_id', $session_id)
                 ->where('paid', false)->first();
                 if($booking) {
                     $booking->delete();
+                    $attendees = Attendee::where('booking_id', $booking->id)->get();
+                    foreach ($attendees as $attendee) {
+                        $attendee->delete();
+                    }
                     //send email to user, village and admin
                 }
-        default:
-            echo 'Received unknown event type ' . $event->type;
-        }
-        return response('', 200);
-    }
-    public function WebHookCanceled()
-    {
-        // This is your Stripe CLI webhook secret for testing your endpoint locally.
-        $endpoint_secret = config('stripe.whc');
-        $payload = @file_get_contents('php://input');
-        $sig_header = $_SERVER['HTTP_STRIPE_SIGNATURE'];
-        $event = null;
-
-        try {
-            $event = \Stripe\Webhook::constructEvent(
-            $payload, $sig_header, $endpoint_secret
-        );
-        } catch(\UnexpectedValueException $e) {
-            return response('', 400);
-        } catch(\Stripe\Exception\SignatureVerificationException $e) {
-            return response('', 400);
-        }
-        // Handle the event
-        switch ($event->type) {
-        case 'checkout.session.expired':
-            $session = $event->data->object;
-            $session_id = $session->id;
-            $booking = Booking::where('payment_session_id', $session_id)
-                ->where('paid', false)->first();
-                if($booking) {
-                    $booking->delete();
-                    //send email to user, village and admin
-                }
-        // ... handle other event types
         default:
             echo 'Received unknown event type ' . $event->type;
         }
@@ -233,7 +206,7 @@ class BookingsController extends Controller
         }
         $registered = DB::table('bookings')
             ->join('events', 'bookings.event_id', '=', 'events.id')
-            ->where('bookings.user_id', '=', $user->id)
+            ->where(['bookings.user_id' => $user->id, 'bookings.paid' => true ])
             ->select('events.*', 'bookings.accepted')
             ->get();
         return response()->json($registered, 200);
@@ -247,7 +220,6 @@ class BookingsController extends Controller
         $kid_id = $attendee->kid_id;
         $parent_id = $attendee->user_id;
         $event_id = $attendee->event_id;
-
         $kid = Kid::all()->where('id', $kid_id)->first();
         $parent = User::all()->where('id', $parent_id)->first();
         $event = Event::all()->where('id', $event_id)->first();

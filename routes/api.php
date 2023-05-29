@@ -38,7 +38,6 @@ Route::apiResources([
     'forgot-password' => 'API\ForgotPasswordController',
     'send-chat' => 'API\ChatController'
 ]);
-
 Route::post('/booking-webhooks', [
     'uses' => 'API\BookingsController@WebHooks'
 ]);
@@ -49,7 +48,7 @@ Route::post('/cancel-booking', [
     'uses' => 'API\BookingsController@CancelBooking'
 ]);
 
-Route::post('/verify-account', [
+Route::post('/verify-user-account', [
     'uses' => 'API\SignUpController@VerifyAccount'
 ]);
 // Route::post('/make-payment', [

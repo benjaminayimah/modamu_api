@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -22,6 +23,7 @@ class UserController extends Controller
         $attendees = array();
         $events = array();
         $images = array();
+        $kids = array();
         
         try {            
             if($user->access_level == 1) { // Village user
@@ -38,6 +40,7 @@ class UserController extends Controller
                     ->where('events.date', '>=', Carbon::now()->toDateString())
                     ->select('users.name', 'users.image', 'events.*')
                     ->get();
+                $kids = User::find($user->id)->getKids;
                 foreach ($events as $event) {
                     $images_ = DB::table('images')->where(['event_id' => $event->id])->first();
                     if(isset($images_)){
@@ -52,6 +55,7 @@ class UserController extends Controller
                 'events' => $events,
                 'images' => $images,
                 'attendees' => $attendees,
+                'kids' => $kids
                 // 'messages' => $messages
             ], 200);
         } catch (\Throwable $th) {

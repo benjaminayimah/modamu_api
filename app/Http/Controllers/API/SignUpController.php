@@ -44,7 +44,7 @@ class SignUpController extends Controller
             $newuser->password = bcrypt($request['password']);
             $newuser->save();
             $token = $this->signInUser($request);
-            // $this->sendMail($email, $name);
+            $this->sendMail($email, $name);
             return response()->json([
                 'name' => $newuser->name,
                 'email' => $newuser->email,
@@ -63,9 +63,10 @@ class SignUpController extends Controller
     }
     public function sendMail($email, $name){
         $token = Crypt::encryptString($email);
+        $host = config('hosts.fe');
         $data = new Email();
         $data->name = $name;
-        $data->url = 'https://staging.d3u9u5xg4yg53c.amplifyapp.com/account-activation/'.$token;
+        $data->url = $host.'/'.'new-account-verification/'.$token;
         Mail::to($email)->send(new WelcomeEmail($data));
     }
     public function parentDetails(Request $request)
@@ -166,17 +167,29 @@ class SignUpController extends Controller
     public function VerifyAccount(Request $request)
     {
         try {
-            $email = Crypt::decryptString($request['token']);
-            $validated = DB::table('users')->where('email', $email)->first();
-            if(isset($validated)) {
-                $user = User::whereEmail($validated->email)->first();
-                $user->email_verified = true;
-                $user->update();
+            $email = Crypt::decryptString($request->token);
+            $user = User::whereEmail($email)->first();
+            if(isset($user)) {
+                if(!$user->email_verified) {
+                    $user->email_verified = true;
+                    $user->update();
+                }
+                return response()->json([
+                    'status' => 'success',
+                    'msg' => 'Your account has been verified successfully',
+                ], 200);
             }
-            return response()->json($email, 200);
+            return response()->json( $this->NotFound(), 401);
         } catch (DecryptException $e) {
-            return response()->json( $e, 401);
+            return response()->json( $this->NotFound(), 401);
         }
+    }
+    public function NotFound()
+    {
+        return [
+            'status' => 'failed',
+            'msg' => 'Sorry we couldn\'t verify your email with the submitted credentials. Click the button below to try again. If the issue persists, please contact support.'
+        ];
     }
     
     public function update(Request $request, $id)

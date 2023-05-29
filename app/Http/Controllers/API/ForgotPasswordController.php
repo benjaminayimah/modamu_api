@@ -66,8 +66,9 @@ class ForgotPasswordController extends Controller
         return $token;
     }
     public function sendMail($token, $email){
+        $host = config('hosts.fe');
         $data = new Email();
-        $data->url = 'https://staging.d3u9u5xg4yg53c.amplifyapp.com/reset-password/'.$token;
+        $data->url = $host.'/'.'reset-password/'.$token;
         $data->hideme = Carbon::now();
         Mail::to($email)->send(new PasswordReset($data));
     }

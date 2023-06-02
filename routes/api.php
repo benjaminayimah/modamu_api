@@ -38,6 +38,10 @@ Route::apiResources([
     'forgot-password' => 'API\ForgotPasswordController',
     'send-chat' => 'API\ChatController'
 ]);
+
+Route::post('/fetch-this-village-events/{id}', [
+    'uses' => 'API\EventController@fetchThisVillageEvents'
+]);
 Route::post('/booking-webhooks', [
     'uses' => 'API\BookingsController@WebHooks'
 ]);

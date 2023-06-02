@@ -3,13 +3,16 @@
 namespace App\Http\Controllers\API;
 
 use App\Attendee;
+use App\Booking;
 use App\Event;
 use App\Http\Controllers\Controller;
+use App\Kid;
 use App\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class UserController extends Controller
@@ -24,9 +27,12 @@ class UserController extends Controller
         $events = array();
         $images = array();
         $kids = array();
-        
+        $villages = array();
+        $bookings = array();
+        $parents = array();
+        $kids = array();
         try {            
-            if($user->access_level == 1) { // Village user
+            if($user->access_level == '1') { // Village user
                 $events = DB::table('events')
                     ->join('users', 'events.user_id', '=', 'users.id')
                     ->where('users.id', $user->id)
@@ -34,7 +40,7 @@ class UserController extends Controller
                     ->get();
                 $images = User::find($user->id)->getImages;
                 $attendees = (new Attendee)->villageAttendees($user->id, true);
-            }elseif($user->access_level == 2) { //Parent user
+            }elseif($user->access_level == '2') { //Parent user
                 $events = DB::table('events')
                     ->join('users', 'events.user_id', '=', 'users.id')
                     ->where('events.date', '>=', Carbon::now()->toDateString())
@@ -46,17 +52,26 @@ class UserController extends Controller
                     if(isset($images_)){
                         array_push($images, $images_);
                     }
-                }
+                }                
+            }elseif ($user->access_level == '0') { //Admin user
+                $villages = User::where('access_level', '1')->get();
+                $bookings = DB::table('bookings')
+                    ->join('users', 'bookings.village_id', '=', 'users.id')
+                    ->where('bookings.paid', true)
+                    ->select('users.name', 'users.image', 'bookings.*')
+                    ->get();
+                $parents = User::where('access_level', '2')->get();
+                $kids = Kid::all();
             }
-            // $messages = array();
-            
             return response()->json([
                 'user' => $user,
                 'events' => $events,
                 'images' => $images,
                 'attendees' => $attendees,
-                'kids' => $kids
-                // 'messages' => $messages
+                'kids' => $kids,
+                'villages' => $villages,
+                'bookings' => $bookings,
+                'parents' => $parents
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([

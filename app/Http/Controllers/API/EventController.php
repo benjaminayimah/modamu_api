@@ -30,7 +30,7 @@ class EventController extends Controller
         $events = array();
         $userLat = $request['lat'];
         $userLng = $request['lng'];
-        $radius = 10; // Search within a 10km radius
+        $radius = 100; // Search within a 100km radius
         $events_ = DB::table('events')
         ->select('*')
         ->whereRaw('(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) <= ?', [$userLat, $userLng, $userLat, $radius])
@@ -117,17 +117,51 @@ class EventController extends Controller
             ->where('events.id', $id)
             ->select('users.name', 'users.image', 'events.*')
         ->first();
-        if ($user->access_level == 1) { //village --owner
-            $images = User::find($user->id)->getImages()
-                ->where('event_id', $id)->get();
-            $attendees = (new Attendee)->villageAttendees($user->id, true);
-        }else { //guest
+        if ($user->access_level == 1) { //village --owner || admin
+            $images = $this->GetImages($user->id, $id);
+            $attendees = $this->GetAttendees($user->id);
+        }elseif ($user->access_level == 0) { //admin
+            $images = $this->GetImages($event->user_id, $id);
+            $attendees = $this->GetAttendees($event->user_id);
+        }
+        else { //guest
             $images = DB::table('images')->where('event_id', $id)->get();
         }
         return response()->json([
             'event' => $event,
             'attendees' => $attendees,
             'images' => $images,
+        ], 200);
+    }
+    public function GetImages($user_id, $event_id)
+    {
+        return User::find($user_id)->getImages()->where('event_id', $event_id)->get();
+    }
+    public function GetAttendees($user_id)
+    {
+        return (new Attendee)->villageAttendees($user_id, true);
+
+    }
+    public function fetchThisVillageEvents($id)
+    {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        $images = array();
+        $events = DB::table('events')
+            ->join('users', 'events.user_id', '=', 'users.id')
+            ->where('events.user_id', $id)
+            ->select('users.name', 'users.image', 'events.*')
+            ->get();
+        foreach ($events as $event) {
+            $images_ = DB::table('images')->where(['event_id' => $event->id])->first();
+            if(isset($images_)){
+                array_push($images, $images_);
+            }
+        } 
+        return response()->json([
+            'events' => $events,
+            'images' => $images
         ], 200);
     }
     public function addToGallery(Request $request, $event) {

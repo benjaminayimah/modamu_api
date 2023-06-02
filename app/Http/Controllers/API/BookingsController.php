@@ -248,13 +248,10 @@ class BookingsController extends Controller
         $chats = array();
         $message_id = 0;
         $parent_id = $request['parent'];
-        $event_id = $request['event'];
         $parent = User::all()->where('id', $parent_id)->first();
-        $kids = DB::table('attendees')
-            ->join('kids', 'attendees.kid_id', '=', 'kids.id')
-            ->where('attendees.user_id', $parent_id)
-            ->where('attendees.event_id', $event_id)
-        ->get();
+        $kids = DB::table('kids')
+            ->where('user_id', $parent_id)
+            ->get();
         $message = DB::table('messages')
             ->where('to', $parent_id)
             ->where('user_id', $user->id)

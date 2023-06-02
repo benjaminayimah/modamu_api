@@ -5,6 +5,7 @@ namespace App\Http\Controllers\API;
 use App\Email;
 use App\User;
 use App\Http\Controllers\Controller;
+use App\Image;
 use App\Kid;
 use App\Mail\WelcomeEmail;
 use Illuminate\Http\Request;
@@ -72,7 +73,7 @@ class SignUpController extends Controller
     public function parentDetails(Request $request)
     {
         $this->validate($request, [
-            'emergency_number' => 'required',
+            'phone' => 'required',
             'relationship' => 'required',
         ]);
         if (! $user = JWTAuth::parseToken()->authenticate()) {
@@ -133,6 +134,9 @@ class SignUpController extends Controller
         ], 200);   
     }
     public function registerVillage(Request $request) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
         $this->validate($request, [
             'email' => 'required|email|unique:users',
             'village_name' => 'required',
@@ -140,6 +144,7 @@ class SignUpController extends Controller
             'password' => 'required|min:6',
         ]);
         try {
+            $village_image = $request['tempImage'];
             $newVillage = new User();
             $newVillage->name = $request['village_name'];
             $newVillage->email = $request['email'];
@@ -149,13 +154,21 @@ class SignUpController extends Controller
             $newVillage->password = bcrypt($request['password']);
             $newVillage->access_level = '1';
             $newVillage->save();
-            $token = $this->signInUser($request);
+            $admin_id = $user->id;
+            $village_id = $newVillage->id;
+            if($village_image != null) {
+                $newVillage->image = $village_image;
+                $newVillage->update();
+                Storage::makeDirectory('public/'.$village_id);
+                if (Storage::disk('public')->exists($admin_id.'/temp'.'/'.$village_image)) {
+                    Storage::disk('public')->move($admin_id.'/temp'.'/'.$village_image, $village_id.'/'.$village_image);
+                    Storage::deleteDirectory('public/'.$admin_id.'/temp');
+                };
+            }
         } catch (\Throwable $th) {
             $this->errorMsg();
         }
-        return response()->json([
-            'token' => $token,
-        ], 200);
+        return response()->json($newVillage, 200);
     }
     public function errorMsg() {
         return response()->json([

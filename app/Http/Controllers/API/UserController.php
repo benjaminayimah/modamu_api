@@ -105,6 +105,22 @@ class UserController extends Controller
         ->get();
         return $attendees;
     }
+    public function FetchThisUser(Request $request)
+    {
+        if (!$user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        $id = $request->id;
+        $kids = [];
+        $thisUser = User::where('id', $id)->first();
+        if($user->access_level != '2') {
+            $kids = Kid::where('user_id', $id)->get();
+        }
+        return response()->json([
+            'thisUser' => $thisUser,
+            'kids' => $kids
+        ], 200);
+    }
     public function update(Request $request)
     {
        //

@@ -22,3 +22,15 @@ Route::get('/reset-password', function () {
 Route::get('/welcome-email', function () {
     return view('emails.welcomeEmail');
 });
+Route::get('/payment-recieved', function () {
+    return view('emails.paymentRecieved');
+});
+Route::get('/event-booked', function () {
+    return view('emails.eventBooked');
+});
+Route::get('/kid-accepted', function () {
+    return view('emails.kidAccepted');
+});
+Route::get('/dropoff-pickup', function () {
+    return view('emails.dropOffPickUp');
+});

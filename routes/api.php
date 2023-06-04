@@ -36,9 +36,12 @@ Route::apiResources([
     'event' => 'API\EventController',
     'bookings' => 'API\BookingsController',
     'forgot-password' => 'API\ForgotPasswordController',
-    'send-chat' => 'API\ChatController'
+    'send-chat' => 'API\ChatController',
+    'notifications' => 'API\NotificationController'
 ]);
-
+Route::post('/fetchThisUser', [
+    'uses' => 'API\userController@FetchThisUser'
+]);
 Route::post('/fetch-this-village-events/{id}', [
     'uses' => 'API\EventController@fetchThisVillageEvents'
 ]);

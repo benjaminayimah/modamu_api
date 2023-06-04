@@ -8,6 +8,7 @@ use App\Http\Controllers\Controller;
 use App\Image;
 use App\Kid;
 use App\Mail\WelcomeEmail;
+use App\Notification;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Mail;
@@ -46,6 +47,10 @@ class SignUpController extends Controller
             $newuser->save();
             $token = $this->signInUser($request);
             $this->sendMail($email, $name);
+            $user_id = $newuser->id;
+            $url = null;
+            $content = 'We\'re excited to have you on board. We\'ve sent an email to '.$email.', please open your email and click on the \' Verify account\' button to confirm it. If you can\'t find it in your inbox kindly check your spam folder.';
+            $this->sendNotification($user_id, $url, $content);
             return response()->json([
                 'name' => $newuser->name,
                 'email' => $newuser->email,
@@ -69,6 +74,10 @@ class SignUpController extends Controller
         $data->name = $name;
         $data->url = $host.'/'.'new-account-verification/'.$token;
         Mail::to($email)->send(new WelcomeEmail($data));
+    }
+    public function sendNotification($user_id, $url, $content)
+    {
+        (new Notification())->insertNotification($user_id, $url, $content);
     }
     public function parentDetails(Request $request)
     {
@@ -156,6 +165,7 @@ class SignUpController extends Controller
             $newVillage->save();
             $admin_id = $user->id;
             $village_id = $newVillage->id;
+            
             if($village_image != null) {
                 $newVillage->image = $village_image;
                 $newVillage->update();

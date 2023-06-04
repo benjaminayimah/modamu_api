@@ -26,6 +26,7 @@ class CreateBookingsTable extends Migration
             $table->enum('kids_status', [0, 1, 2, 3])->default(0);
             $table->string('payment_type')->nullable();
             $table->string('payment_session_id');
+            $table->string('receipt_no');
             $table->boolean('paid')->default(false);
             $table->boolean('parent_delete')->default(false);
             $table->boolean('village_delete')->default(false);

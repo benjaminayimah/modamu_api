@@ -112,24 +112,6 @@ class ForgotPasswordController extends Controller
         DB::table('password_resets')->where('email', $email)->delete();
         return response()->json($email, 200);
     }
-   
-    // private function verifyUser($this_user){
-    //     return response()->json($this_user, 200);
-
-    //     $findUser = DB::table('password_resets')->where([
-    //         'email' => $this_user->email
-    //     ]);
-    //     if(isset($user)) {
-    //         if( Carbon::now() > $this_user->expires) {
-    //             return response()->json([
-    //                 'title' => 'Error!',
-    //                 'message' => 'Your token has expired. Please resend a new \'forgot password\' link.'
-    //             ], 401);
-    //         }
-    //     }else {
-    //         $this->doResetPassword($this_user->email);
-    //     }
-    // }
 
     public function destroy($id)
     {

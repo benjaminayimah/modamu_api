@@ -4,14 +4,22 @@ namespace App\Http\Controllers\API;
 
 use App\Attendee;
 use App\Booking;
+use App\Email;
 use App\Event;
 use App\Http\Controllers\Controller;
 use App\Kid;
+use App\Mail\DropOffPickUp;
+use App\Mail\EventBooked;
+use App\Mail\KidAccepted;
+use App\Mail\PaymentRecieved;
 use App\Message;
+use App\Notification;
 use App\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use UnexpectedValueException;
 
@@ -59,6 +67,7 @@ class BookingsController extends Controller
                 'cancel_url' => $request['url'].'/canceled/{CHECKOUT_SESSION_ID}',
             ]);
             //place temp booking
+            $receipt_no = rand(1111111111,9999999999);
             $booking = new Booking();
             $booking->user_id = $parent_id;
             $booking->village_id = $village_id;
@@ -68,6 +77,7 @@ class BookingsController extends Controller
             $booking->amount_per_child = $amount;
             $booking->total_amount = $total_amount;
             $booking->payment_session_id = $session->id;
+            $booking->receipt_no = $receipt_no;
             $booking->payment_type = 'card';
             $booking->save();
             foreach ($kid_array as $id) {
@@ -104,8 +114,7 @@ class BookingsController extends Controller
                 throw new NotFoundHttpException();
             }
             if(!$booking->paid) {
-                $booking->paid = true;
-                $booking->update();
+                $this->FinishBooking($booking);
             }
             return response()->json('success', 200);
         } catch (\Throwable $th) {
@@ -164,9 +173,7 @@ class BookingsController extends Controller
             $session_id = $session->id;
             $booking = Booking::where('payment_session_id', $session_id)->first();
             if($booking && !$booking->paid) {
-                $booking->paid = true;
-                $booking->update();
-                //send email to user, village and admin
+                $this->FinishBooking($booking);
             }
         case 'checkout.session.async_payment_failed': //or expired
             $session = $event->data->object;
@@ -185,6 +192,43 @@ class BookingsController extends Controller
             echo 'Received unknown event type ' . $event->type;
         }
         return response('', 200);
+    }
+    public function FinishBooking($booking)
+    {
+        $booking->paid = true;
+        $booking->update();
+        //send email to user
+        $user = User::where('id', $booking->user_id)->first();
+        $village = User::where('id', $booking->village_id)->first();
+        $event = Event::where('id', $booking->event_id)->first();
+        $email = $user->email;
+        $host = config('hosts.fe');
+        $data = new Email();
+        $data->name = $user->name;
+        $data->booking_no = $booking->receipt_no;
+        $data->number_of_kids = $booking->number_of_kids;
+        $data->amount_per_child = $booking->amount_per_child;
+        $data->total_amount = $booking->total_amount;
+        $data->event_name = $event->event_name;
+        $data->village_name = $village->name;
+        $data->address = $village->address;
+        $data->date = Carbon::parse($event->date)->format('l jS F Y');
+        $data->start_time = Carbon::parse($event->start_time)->format('h:i:s A');
+        $data->end_time = Carbon::parse($event->end_time)->format('h:i:s A');
+        $data->url = $host.'/'.'registered-events';
+        $data->hideme = Carbon::now();
+        Mail::to($email)->send(new PaymentRecieved($data));
+        //send email to village owner
+        $village_email = $village->email;
+        $order = new Email();
+        $order->name = $village->name;
+        $order->url = $host;
+        $order->hideme = Carbon::now();
+        Mail::to($village_email)->send(new EventBooked($order));
+        $user_id = $village->id;
+        $url = 'waitlists';
+        $content = 'You have a new booking!';
+        (new Notification())->insertNotification($user_id, $url, $content);
     }
     public function VillageFetchAttendees()
     {
@@ -276,13 +320,23 @@ class BookingsController extends Controller
             $attendee = Attendee::findOrFail($id);
             $attendee->accepted = true;
             $attendee->update();
-            $booking = Booking::all()
-                ->where('user_id', $attendee->user_id)
-                ->where('event_id', $attendee->event_id)
-                ->first();
+            $booking = Booking::where('id', $attendee->booking_id)->first();
             if(!$booking->accepted) {
                 $booking->accepted = true;
                 $booking->update();
+                //send email to parent
+                $host = config('hosts.fe');
+                $parent = User::where('id', $booking->user_id)->first();
+                $email = $parent->email;
+                $data = new Email();
+                $data->name = $parent->name;
+                $data->url = $host;
+                $data->hideme = Carbon::now();
+                Mail::to($email)->send(new KidAccepted($data));
+                $user_id = $parent->id;
+                $url = 'registered-events';
+                $content = 'Your booking have been finalized and the status updated.';
+                (new Notification())->insertNotification($user_id, $url, $content);
             }
             return response()->json($attendee, 200);
         } catch (\Throwable $th) {
@@ -305,13 +359,23 @@ class BookingsController extends Controller
             $attendee->status = '2';
             $attendee->security_code = $code;
             $attendee->update();
-            $booking = Booking::all()
-                ->where('event_id', $attendee->event_id)
-                ->where('user_id', $attendee->user_id)
-                ->first();
+            $booking = Booking::where('id', $attendee->booking_id)->first();
             if($booking->kids_status == '0') {
                 $booking->kids_status = '2';
                 $booking->update();
+                $pronoun = 'child';
+                $count = Attendee::where('booking_id', $booking->id)->get()->count();
+                if($count > 1) {
+                    $pronoun = 'kids';
+                }
+                $parent = User::where('id', $booking->user_id)->first();
+                $title = 'Your '.$pronoun.' have been droped off';
+                $body = 'Your '.$pronoun.' have been dropped off at the village. A unique code is generated for each child, please find this code at the \'Verify code\' menu. The code will be requested during pick-up time.';
+                $name = $parent->name;
+                $email = $parent->email;
+                $this->SendEmail($title, $body, $name, $email);
+                $url = 'verify-code-and-checkout';
+                $this->SendNotification($parent->id, $url, $title);
             }
             return response()->json($this->getKid($id), 200);
         } catch (\Throwable $th) {
@@ -320,6 +384,19 @@ class BookingsController extends Controller
             ], 500);
         }
 
+    }
+    public function SendEmail($title, $body, $name, $email)
+    {
+        $data = new Email();
+        $data->title = $title;
+        $data->body = $body;
+        $data->name = $name;
+        $data->hideme = Carbon::now();
+        Mail::to($email)->send(new DropOffPickUp($data));
+    }
+    public function SendNotification($id, $url, $content)
+    {
+        (new Notification())->insertNotification($id, $url, $content);
     }
     public function CheckOutKid(Request $request) {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
@@ -335,13 +412,23 @@ class BookingsController extends Controller
             if($code == $attendee->security_code) {
                 $attendee->status = '3';
                 $attendee->update();
-                $booking = Booking::all()
-                    ->where('event_id', $attendee->event_id)
-                    ->where('user_id', $attendee->user_id)
-                    ->first();
+                $booking = Booking::where('id', $attendee->booking_id)->first();
                 if($booking->kids_status != '3') {
                     $booking->kids_status = '3';
                     $booking->update();
+                    $pronoun = 'child';
+                    $count = Attendee::where('booking_id', $booking->id)->get()->count();
+                    if($count > 1) {
+                        $pronoun = 'kids';
+                    }
+                    $parent = User::where('id', $booking->user_id)->first();
+                    $title = 'Your '.$pronoun.' have been picked up';
+                    $name = $parent->name;
+                    $body = 'Your '.$pronoun.' have been picked up from our village. Thank you for letting us spend time with them, he hope to see you agian!';
+                    $email = $parent->email;
+                    $this->SendEmail($title, $body, $name, $email);
+                    $url = '';
+                    $this->SendNotification($parent->id, $url, $title);
                 }
                 return response()->json($this->getKid($id), 200);
             }else {

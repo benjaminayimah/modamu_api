@@ -23,6 +23,9 @@ class CreateAttendeesTable extends Migration
             $table->boolean('accepted')->default(false);
             $table->enum('status', [0, 1, 2, 3])->default(0);
             $table->string('security_code')->nullable();
+            $table->boolean('parent_delete')->default(false);
+            $table->boolean('village_delete')->default(false);
+            $table->boolean('admin_delete')->default(false);
             $table->boolean('ended')->default(false);
             $table->timestamps();
         });

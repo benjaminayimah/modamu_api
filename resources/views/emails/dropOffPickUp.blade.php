@@ -25,25 +25,20 @@
                                         </a>
                                     </p>
                                     <div style="padding: 12px 0">
-                                        <span style="color: #0173FF; padding-bottom: 6px; font-weight: 600; font-size: 25px; display:inline-block">
-                                            You're welcome on board!
+                                        <span style="color: #0173FF;font-weight: 600; font-size: 25px; display:inline-block">
+                                            {{ $title }}
                                         </span>
                                     </div>
                                     <div style="color: rgb(34, 34, 34);">
                                         <p>
-                                            <strong>Hello {{ $name }},</strong>
+                                            <strong>Dear {{ $name }},</strong>
                                         </p>
                                         <p>
-                                            We're excited to have you on board our platform. In order to get started, please confirm your email by clicking on the 'verify account' button below.
+                                            {{ $body }}
                                         </p>
-                                        <p>
-                                            <a href="{{ $url }}" target="_blank" class="btn" style="background-color: #0173FF; border-radius: 18px; text-align: center; color:#fff; display:block; padding: 14px 24px; text-decoration: none; margin: 32px 24px">Verify account</a>
-                                        </p>
-                                        <p>
-                                            We can't wait to assist you create fun experience for your kids while you unwind, relax, and recharge.
-                                        </p>
+                                        
                                         <p style="margin-top: 32px">
-                                            Best regards!<br/>
+                                            Best regards.<br/>
                                             Modamu Team.
                                         </p>
                                     </div>
@@ -57,6 +52,7 @@
                                         <p>
                                             <div>© 2023 Modamu. All Rights Reserved.</div>
                                         </p>
+                                        <span style="opacity: 0">{{ $hideme }} </span>
                                     </div>
                                 </div>
                             </td>

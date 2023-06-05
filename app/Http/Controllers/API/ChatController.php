@@ -22,7 +22,7 @@ class ChatController extends Controller
     public function getMessages($user) {
         $messages = array();
         if($user->access_level == 1 || $user->access_level == 0) { // Village user
-            $my_messages = User::find($user->id)->getMessages;
+            $my_messages = User::find($user->id)->getMessages()->orderBy('id', 'DESC')->get();
             foreach ($my_messages as $message) {
                 $sender = DB::table('users')->where('id', $message->to)->first();
                 $new_message = new Message();

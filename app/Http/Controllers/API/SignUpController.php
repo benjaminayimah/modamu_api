@@ -157,6 +157,7 @@ class SignUpController extends Controller
             $newVillage = new User();
             $newVillage->name = $request['village_name'];
             $newVillage->email = $request['email'];
+            $newVillage->phone = $request['phone'];
             $newVillage->address = $request['address'];
             $newVillage->latitude = $request['latitude'];
             $newVillage->longitude = $request['longitude'];
@@ -165,7 +166,7 @@ class SignUpController extends Controller
             $newVillage->save();
             $admin_id = $user->id;
             $village_id = $newVillage->id;
-            
+
             if($village_image != null) {
                 $newVillage->image = $village_image;
                 $newVillage->update();

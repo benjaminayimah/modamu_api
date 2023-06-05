@@ -6,6 +6,7 @@ use App\Attendee;
 use App\Booking;
 use App\Event;
 use App\Http\Controllers\Controller;
+use App\Image;
 use App\Kid;
 use App\User;
 use Carbon\Carbon;
@@ -31,6 +32,8 @@ class UserController extends Controller
         $bookings = array();
         $parents = array();
         $kids = array();
+        $waitlist = [];
+
         try {            
             if($user->access_level == '1') { // Village user
                 $events = DB::table('events')
@@ -40,6 +43,13 @@ class UserController extends Controller
                     ->get();
                 $images = User::find($user->id)->getImages;
                 $attendees = (new Attendee)->villageAttendees($user->id, true);
+                $bookings = DB::table('bookings')
+                    ->join('users', 'bookings.user_id', '=', 'users.id')
+                    ->where('bookings.village_id', $user->id)
+                    ->where('bookings.paid', true)
+                    ->select('users.name', 'users.image', 'users.id')
+                    ->get();
+                $waitlist = (new Attendee)->villageAttendees($user->id, false);
             }elseif($user->access_level == '2') { //Parent user
                 $events = DB::table('events')
                     ->join('users', 'events.user_id', '=', 'users.id')
@@ -54,14 +64,20 @@ class UserController extends Controller
                     }
                 }                
             }elseif ($user->access_level == '0') { //Admin user
-                $villages = User::where('access_level', '1')->get();
+                $villages = User::where('access_level', '1')->orderBy('id', 'DESC')->get();
                 $bookings = DB::table('bookings')
                     ->join('users', 'bookings.village_id', '=', 'users.id')
                     ->where('bookings.paid', true)
                     ->select('users.name', 'users.image', 'bookings.*')
+                    ->orderBy('id', 'DESC')
                     ->get();
-                $parents = User::where('access_level', '2')->get();
+                $parents = User::where('access_level', '2')->orderBy('id', 'DESC')->get();
                 $kids = Kid::all();
+                $attendees = DB::table('attendees')
+                    ->join('kids', 'attendees.kid_id', '=', 'kids.id')
+                    ->where('attendees.accepted', true)
+                    ->select('kids.user_id', 'kids.photo')
+                    ->get();
             }
             return response()->json([
                 'user' => $user,
@@ -71,7 +87,8 @@ class UserController extends Controller
                 'kids' => $kids,
                 'villages' => $villages,
                 'bookings' => $bookings,
-                'parents' => $parents
+                'parents' => $parents,
+                'waitlist' => $waitlist
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([

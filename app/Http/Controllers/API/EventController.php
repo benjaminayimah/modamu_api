@@ -34,6 +34,7 @@ class EventController extends Controller
         $events_ = DB::table('events')
         ->select('*')
         ->whereRaw('(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) <= ?', [$userLat, $userLng, $userLat, $radius])
+        ->orderBy('id', 'DESC')
         ->get();
         foreach ($events_ as $event) {
             $image = DB::table('images')->where(['event_id' => $event->id])->first();
@@ -152,6 +153,7 @@ class EventController extends Controller
             ->join('users', 'events.user_id', '=', 'users.id')
             ->where('events.user_id', $id)
             ->select('users.name', 'users.image', 'events.*')
+            ->orderBy('id', 'DESC')
             ->get();
         foreach ($events as $event) {
             $images_ = DB::table('images')->where(['event_id' => $event->id])->first();

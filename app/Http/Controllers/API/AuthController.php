@@ -64,7 +64,7 @@ class AuthController extends Controller
         ]);
         if($user->access_level == 2) {
             $this->validate($request, [
-                'emergency_number' => 'required',
+                'phone' => 'required',
             ]);
         }
         $id = $user->id;

@@ -7,11 +7,10 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class DropOffPickUp extends Mailable
+class DropOff extends Mailable
 {
     use Queueable, SerializesModels;
     public $data;
-
 
     /**
      * Create a new message instance.
@@ -30,7 +29,7 @@ class DropOffPickUp extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.dropOffPickUp')->with([
+        return $this->view('emails.dropOff')->with([
             'name' => $this->data->name,
             'title' => $this->data->title,
             'body' => $this->data->body,

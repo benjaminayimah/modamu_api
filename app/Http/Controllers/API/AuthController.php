@@ -55,6 +55,7 @@ class AuthController extends Controller
     }
     public function update(Request $request, $id)
     {
+        
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
@@ -64,7 +65,7 @@ class AuthController extends Controller
         ]);
         if($user->access_level == 2) {
             $this->validate($request, [
-                'phone' => 'required',
+                'phone_number' => 'required',
             ]);
         }
         $id = $user->id;
@@ -82,22 +83,20 @@ class AuthController extends Controller
             $updateUser->phone = $request['phone_number'];
             $updateUser->emergency_number = $request['emergency_number'];
             $updateUser->ocupation = $request['ocupation'];
+
             // $updateUser->address = $request['address'];
             if($newImage != null) {
                 if($newImage == $oldImage) {
-                    // $updateUser->update();
                     $this->deleteTemp($id);
                 }else {
                     $updateUser->image = $newImage;
                     Storage::disk('public')->move($id.'/temp'.'/'.$newImage, $id.'/'.$newImage);
                     $this->deleteTemp($id);
                     $this->deleteOldCopy($id, $oldImage);
-                    // $updateUser->update();
                 }
             } else {
                 $updateUser->image = null;
                 $this->deleteOldCopy($id, $oldImage);
-                // $updateUser->update();
             }
             $updateUser->update();
             return response()->json([

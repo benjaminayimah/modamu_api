@@ -39,6 +39,9 @@ Route::apiResources([
     'send-chat' => 'API\ChatController',
     'notifications' => 'API\NotificationController'
 ]);
+Route::put('/update-kid/{id}', [
+    'uses' => 'API\SignUpController@UpdateKid'
+]);
 Route::post('/fetchThisUser', [
     'uses' => 'API\userController@FetchThisUser'
 ]);

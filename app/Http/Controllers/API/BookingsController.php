@@ -8,10 +8,11 @@ use App\Email;
 use App\Event;
 use App\Http\Controllers\Controller;
 use App\Kid;
-use App\Mail\DropOffPickUp;
+use App\Mail\DropOff;
 use App\Mail\EventBooked;
 use App\Mail\KidAccepted;
 use App\Mail\PaymentRecieved;
+use App\Mail\PickUp;
 use App\Message;
 use App\Notification;
 use App\User;
@@ -373,7 +374,12 @@ class BookingsController extends Controller
                 $body = 'Your '.$pronoun.' have been dropped off at the village. A unique code is generated for each child, please find this code at the \'Verify code\' menu. The code will be requested during pick-up time.';
                 $name = $parent->name;
                 $email = $parent->email;
-                $this->SendEmail($title, $body, $name, $email);
+                $data = new Email();
+                $data->title = $title;
+                $data->body = $body;
+                $data->name = $name;
+                $data->hideme = Carbon::now();
+                Mail::to($email)->send(new DropOff($data));
                 $url = 'verify-code-and-checkout';
                 $this->SendNotification($parent->id, $url, $title);
             }
@@ -384,15 +390,6 @@ class BookingsController extends Controller
             ], 500);
         }
 
-    }
-    public function SendEmail($title, $body, $name, $email)
-    {
-        $data = new Email();
-        $data->title = $title;
-        $data->body = $body;
-        $data->name = $name;
-        $data->hideme = Carbon::now();
-        Mail::to($email)->send(new DropOffPickUp($data));
     }
     public function SendNotification($id, $url, $content)
     {
@@ -426,7 +423,12 @@ class BookingsController extends Controller
                     $name = $parent->name;
                     $body = 'Your '.$pronoun.' have been picked up from our village. Thank you for letting us spend time with them, he hope to see you agian!';
                     $email = $parent->email;
-                    $this->SendEmail($title, $body, $name, $email);
+                    $data = new Email();
+                    $data->title = $title;
+                    $data->body = $body;
+                    $data->name = $name;
+                    $data->hideme = Carbon::now();
+                    Mail::to($email)->send(new PickUp($data));
                     $url = '';
                     $this->SendNotification($parent->id, $url, $title);
                 }

@@ -142,6 +142,54 @@ class SignUpController extends Controller
             'kid' => $kid
         ], 200);   
     }
+    public function UpdateKid(Request $request, $id)
+    {
+        $this->validate($request, [
+            'name' => 'required',
+            'gender' => 'required',
+            'dob' => 'required'
+        ]);
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        $user_id = $user->id;
+        $newImage = $request['tempImage'];
+        $kid = Kid::findOrFail($id);
+        $oldImage = $kid->photo;
+        try {
+            $kid->kid_name = $request['name'];
+            $kid->gender = $request['gender'];
+            $kid->height = $request['height'];
+            $kid->dob = $request['dob'];
+            $kid->about = $request['about'];
+            if($newImage != null) {
+                if($newImage == $oldImage) {
+                    $this->deleteTemp($id);
+                }else {
+                    $kid->photo = $newImage;
+                    Storage::disk('public')->move($user_id.'/temp'.'/'.$newImage, $user_id.'/'.$newImage);
+                    $this->deleteTemp($user_id);
+                    $this->deleteOldCopy($user_id, $oldImage);
+                }
+            } else {
+                $kid->photo = null;
+                $this->deleteOldCopy($user_id, $oldImage);
+            }
+            $kid->update();
+
+        } catch (\Throwable $th) {
+            $this->errorMsg();
+        }
+        return response()->json($kid, 200);   
+    }
+    public function deleteTemp($id) {
+        Storage::deleteDirectory('public/'.$id.'/temp');
+    }
+    public function deleteOldCopy($id, $image) {
+        if(Storage::disk('public')->exists($id.'/'.$image)) {
+            Storage::disk('public')->delete($id.'/'.$image);
+        }
+    }
     public function registerVillage(Request $request) {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);

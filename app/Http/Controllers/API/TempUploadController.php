@@ -55,7 +55,7 @@ class TempUploadController extends Controller
             return response()->json(['status' => 'User not found!'], 404);
         }
         $id = $user->id;
-        $image = $user->image;
+        $image = $request->image;
         if (!Storage::directories('public/'.$id.'/temp')) {
             Storage::makeDirectory('public/'.$id.'/temp');
         }
@@ -65,7 +65,6 @@ class TempUploadController extends Controller
         return response()->json([
             'status' => 'success',
             'image' => $image
-
         ], 200);
 
     }

@@ -13,12 +13,12 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ChatController extends Controller
 {
-    public function fetchMessages() {
-        if (! $user = JWTAuth::parseToken()->authenticate()) {
-            return response()->json(['status' => 'User not found!'], 404);
-        }
-        return response()->json($this->getMessages($user), 200);
-    }
+    // public function fetchMessages() {
+    //     if (! $user = JWTAuth::parseToken()->authenticate()) {
+    //         return response()->json(['status' => 'User not found!'], 404);
+    //     }
+    //     return response()->json($this->getMessages($user), 200);
+    // }
     public function getMessages($user) {
         $messages = array();
         if($user->access_level == 1 || $user->access_level == 0) { // Village user
@@ -28,7 +28,7 @@ class ChatController extends Controller
                 $new_message = new Message();
                 $new_message->message = $message;
                 $new_message->sender = $sender;
-                $new_message->unread = $this->count_unread($message->id);
+                $new_message->unread = $this->count_unread($message->id, $user->id);
                 array_push($messages, $new_message);
             }
         }elseif($user->access_level == 2) { //Parent user
@@ -38,27 +38,34 @@ class ChatController extends Controller
                 $new_message = new Message();
                 $new_message->message = $message;
                 $new_message->sender = $sender;
-                $new_message->unread = $this->count_unread($message->id);
+                $new_message->unread = $this->count_unread($message->id, $user->id);
                 array_push($messages, $new_message);
             }
         }
         return $messages;
     }
-    public function count_unread($id) {
+    public function count_unread($id, $user_id) {
         return Message::find($id)->getChats()
-            ->where('read', false)->count();
+            ->where('read', false)
+            ->where('user_id', '!=', $user_id)
+            ->count();
     }
     public function FetchThisChats($id) {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
         $chats = Message::find($id)->getChats;
+        foreach ($chats as $key) {
+            if($key->user_id != $user->id) {
+                $key->read = true;
+                $key->update();
+            }
+        }
         $to = Message::findOrFail($id)->user_id;
         if($user->access_level == 1) {//village
             $to = Message::findOrFail($id)->to;
         }
         $to_user = User::findOrFail($to);
-        $id = $to_user->id;
         $image = $to_user->image;
         return response()->json([
             'chats' => $chats,

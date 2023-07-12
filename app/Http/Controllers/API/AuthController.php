@@ -55,7 +55,6 @@ class AuthController extends Controller
     }
     public function update(Request $request, $id)
     {
-        
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
@@ -68,7 +67,6 @@ class AuthController extends Controller
                 'phone_number' => 'required',
             ]);
         }
-        $id = $user->id;
         $newImage = $request['tempImage'];
         $updateUser = User::findOrFail($id);
         $oldImage = $updateUser->image;
@@ -83,6 +81,7 @@ class AuthController extends Controller
             $updateUser->phone = $request['phone_number'];
             $updateUser->emergency_number = $request['emergency_number'];
             $updateUser->ocupation = $request['ocupation'];
+            // $updateUser->zipcode = $request['zipcode'];
 
             // $updateUser->address = $request['address'];
             if($newImage != null) {
@@ -99,9 +98,7 @@ class AuthController extends Controller
                 $this->deleteOldCopy($id, $oldImage);
             }
             $updateUser->update();
-            return response()->json([
-                'user' => $updateUser,
-            ], 200);
+            return response()->json($updateUser, 200);
             
         } catch (\Throwable $th) {
             return response()->json([
@@ -127,7 +124,6 @@ class AuthController extends Controller
             'new_password' => 'required|min:6',
         ]);
         try {
-            $user = User::findOrFail($user->id);
             $current_pass = $user->password;
             $new_password = $request['new_password'];
             if (Hash::check($request['current_password'], $current_pass)) {
@@ -141,6 +137,27 @@ class AuthController extends Controller
                     'errors' => $new_err
                 ], 422);
             }
+        } catch (\Throwable $th) {
+            return response()->json([
+                'title' => 'Error!'
+            ], 500);
+        }
+        return response()->json([
+            'message' => 'Password is updated'
+        ], 200);
+    }
+    public function ChangeOtherPass(Request $request, $id) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        $this->validate($request, [
+            'new_password' => 'required|min:6',
+        ]);
+        try {
+            $new_password = $request['new_password'];
+            $thisUser = User::findOrFail($id);
+            $thisUser->password = bcrypt($new_password);
+            $thisUser->update();
         } catch (\Throwable $th) {
             return response()->json([
                 'title' => 'Error!'

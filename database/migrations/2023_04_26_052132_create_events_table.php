@@ -25,6 +25,7 @@ class CreateEventsTable extends Migration
             $table->string('date');
             $table->string('start_time');
             $table->string('end_time');
+            $table->boolean('active')->default(true);
             $table->text('description')->nullable();
             $table->timestamps();
         });

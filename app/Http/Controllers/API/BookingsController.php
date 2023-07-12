@@ -252,7 +252,7 @@ class BookingsController extends Controller
         $registered = DB::table('bookings')
             ->join('events', 'bookings.event_id', '=', 'events.id')
             ->where(['bookings.user_id' => $user->id, 'bookings.paid' => true ])
-            ->select('events.*', 'bookings.accepted')
+            ->select('events.*', 'bookings.accepted', 'bookings.kids_status')
             ->get();
         return response()->json($registered, 200);
     }
@@ -269,7 +269,6 @@ class BookingsController extends Controller
         $parent = User::all()->where('id', $parent_id)->first();
         $event = Event::all()->where('id', $event_id)->first();
         $otherKids = array();
-
         $attendess = DB::table('attendees')
             ->where('user_id', $parent_id)
             ->where('event_id', $event_id)
@@ -277,13 +276,18 @@ class BookingsController extends Controller
             ->get();
         foreach ($attendess as $key => $value) {
             $newKid = Kid::all()->where('id', $value->kid_id)->first();
-            array_push($otherKids, $newKid);
+            if($newKid) {
+                array_push($otherKids, $newKid);
+            }
         }
         return response()->json([
             'kid' => $kid,
             'parent' => $parent,
             'event' => $event,
-            'otherkids' => $otherKids
+            'otherkids' => $otherKids,
+            'hobbies' => Kid::find($kid_id)->getHobbies,
+            'illnesses' => Kid::find($kid_id)->getIllnesses,
+            'allergies' => Kid::find($kid_id)->getAllergies
         ], 200);
     }
     public function FetchThisParent(Request $request) {
@@ -371,7 +375,7 @@ class BookingsController extends Controller
                 }
                 $parent = User::where('id', $booking->user_id)->first();
                 $title = 'Your '.$pronoun.' have been droped off';
-                $body = 'Your '.$pronoun.' have been dropped off at the village. A unique code is generated for each child, please find this code at the \'Verify code\' menu. The code will be requested during pick-up time.';
+                $body = 'Your '.$pronoun.' have been dropped off at the village. A unique code is generated for each child, please find this code at the "Verify code" menu. The code will be requested during pick-up time.';
                 $name = $parent->name;
                 $email = $parent->email;
                 $data = new Email();
@@ -421,7 +425,7 @@ class BookingsController extends Controller
                     $parent = User::where('id', $booking->user_id)->first();
                     $title = 'Your '.$pronoun.' have been picked up';
                     $name = $parent->name;
-                    $body = 'Your '.$pronoun.' have been picked up from our village. Thank you for letting us spend time with them, he hope to see you agian!';
+                    $body = 'Your '.$pronoun.' have been picked up from our village. Thank you for letting us spend time with them, we hope to see you agian!';
                     $email = $parent->email;
                     $data = new Email();
                     $data->title = $title;
@@ -459,12 +463,6 @@ class BookingsController extends Controller
     {
         //
     }
-
-    public function show($id)
-    {
-        //
-    }
-
     public function update(Request $request, $id)
     {
         //

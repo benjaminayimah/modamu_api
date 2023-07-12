@@ -30,7 +30,7 @@ class EventController extends Controller
         $events = array();
         $userLat = $request['lat'];
         $userLng = $request['lng'];
-        $radius = 100; // Search within a 100km radius
+        $radius = $request['rad']; // Search within a 100km radius
         $events_ = DB::table('events')
         ->select('*')
         ->whereRaw('(6371 * acos(cos(radians(?)) * cos(radians(latitude)) * cos(radians(longitude) - radians(?)) + sin(radians(?)) * sin(radians(latitude)))) <= ?', [$userLat, $userLng, $userLat, $radius])
@@ -113,11 +113,7 @@ class EventController extends Controller
             return response()->json(['status' => 'User not found!'], 404);
         }
         $attendees = array();
-        $event = DB::table('events')
-            ->join('users', 'events.user_id', '=', 'users.id')
-            ->where('events.id', $id)
-            ->select('users.name', 'users.image', 'events.*')
-        ->first();
+        $event = $this->GetEvent($id);
         if ($user->access_level == 1) { //village --owner || admin
             $images = $this->GetImages($user->id, $id);
             $attendees = $this->GetAttendees($user->id);
@@ -133,6 +129,13 @@ class EventController extends Controller
             'attendees' => $attendees,
             'images' => $images,
         ], 200);
+    }
+    public function GetEvent($id) {
+        return DB::table('events')
+            ->join('users', 'events.user_id', '=', 'users.id')
+            ->where('events.id', $id)
+            ->select('users.name', 'users.image', 'events.*')
+        ->first();
     }
     public function GetImages($user_id, $event_id)
     {
@@ -280,7 +283,32 @@ class EventController extends Controller
      */
     public function update(Request $request, $id)
     {
-        //
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        $this->validate($request, [
+            'event_name' => 'required',
+            'date' => 'required',
+            'description' => 'required',
+            'start_time' => 'required',
+            'end_time' => 'required',
+        ]);
+        try {
+            $event = Event::findOrFail($id);
+            $event->event_name = $request['event_name'];
+            $event->date = $request['date'];
+            $event->start_time = $request['start_time'];
+            $event->end_time = $request['end_time'];
+            $event->amount = $request['amount'];
+            $event->limit = $request['attendance_limit'];
+            $event->description = $request['description'];
+            $event->update();
+            return response()->json($this->GetEvent($id), 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'title' => 'Error!',
+            ], 500);
+        }
     }
 
     /**

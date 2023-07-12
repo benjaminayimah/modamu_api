@@ -66,4 +66,16 @@ class User extends Authenticatable implements JWTSubject
     public function getNotifications() {
         return $this->hasMany(Notification::class);
     }
+    public function getHobbies() {
+        return $this->hasMany(Hobby::class);
+    }
+    public function getIllnesses() {
+        return $this->hasMany(Illness::class);
+    }
+    public function getAllergies() {
+        return $this->hasMany(Allergy::class);
+    }
+    public function getSubPermissions() {
+        return $this->hasMany(AdminAccess::class);
+    }
 }

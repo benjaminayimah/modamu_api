@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\MeController;
+use App\Http\Controllers\pdfController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,21 +18,25 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('welcome');
 });
-Route::get('/reset-password', function () {
-    return view('emails.passwordReset');
-});
-Route::get('/welcome-email', function () {
-    return view('emails.welcomeEmail');
-});
-Route::get('/payment-recieved', function () {
-    return view('emails.paymentRecieved');
-});
-Route::get('/event-booked', function () {
-    return view('emails.eventBooked');
-});
-Route::get('/kid-accepted', function () {
-    return view('emails.kidAccepted');
-});
-Route::get('/dropoff-pickup', function () {
-    return view('emails.dropOffPickUp');
-});
+// Route::get('/reset-password', function () {
+//     return view('emails.passwordReset');
+// });
+// Route::get('/welcome-email', function () {
+//     return view('emails.welcomeEmail');
+// });
+// Route::get('/payment-recieved', function () {
+//     return view('emails.paymentRecieved');
+// });
+// Route::get('/event-booked', function () {
+//     return view('emails.eventBooked');
+// });
+// Route::get('/kid-accepted', function () {
+//     return view('emails.kidAccepted');
+// });
+// Route::get('/dropoff-pickup', function () {
+//     return view('emails.dropOffPickUp');
+// });
+// Route::get('/account-is-ready', function () {
+//     return view('emails.adminSendLoginDetails');
+// });
+Route::get('/view-pdf', [MeController::class, 'me']);

@@ -37,13 +37,27 @@ Route::apiResources([
     'bookings' => 'API\BookingsController',
     'forgot-password' => 'API\ForgotPasswordController',
     'send-chat' => 'API\ChatController',
-    'notifications' => 'API\NotificationController'
+    'notifications' => 'API\NotificationController',
+    'sub-admin' => 'API\SubAdminController',
+
+]);
+Route::delete('/remove-village-allocation/{id}' , [
+    'uses' => 'API\SubAdminController@RemoveVillageAllocation',
+]);
+Route::post('/access-control-update', [
+    'uses' => 'API\SubAdminController@UpdateAccessControl'
+]);
+Route::post('/access-control', [
+    'uses' => 'API\SubAdminController@AccessControl'
+]);
+Route::post('/allocate-village', [
+    'uses' => 'API\SubAdminController@AllocateVillage'
 ]);
 Route::put('/update-kid/{id}', [
     'uses' => 'API\SignUpController@UpdateKid'
 ]);
-Route::post('/fetchThisUser', [
-    'uses' => 'API\userController@FetchThisUser'
+Route::post('/fetch-this-user', [
+    'uses' => 'API\UserController@FetchThisUser'
 ]);
 Route::post('/fetch-this-village-events/{id}', [
     'uses' => 'API\EventController@fetchThisVillageEvents'
@@ -71,7 +85,7 @@ Route::post('/fetch-this-chats/{id}', [
     'uses' => 'API\ChatController@FetchThisChats'
 ]);
 Route::get('/fetch-messages', [
-    'uses' => 'API\ChatController@fetchMessages'
+    'uses' => 'API\UserController@fetchMessages'
 ]);
 Route::post('/do-reset-password', [
     'uses' => 'API\ForgotPasswordController@ResetPassword'
@@ -97,9 +111,9 @@ Route::get('/parent-fetch-attendees', [
 Route::get('/village-fetch-attendees', [
     'uses' => 'API\BookingsController@VillageFetchAttendees'
 ]);
-Route::get('/fetch-this-kid/{id}', [
-    'uses' => 'API\UserController@FetchThisKid'
-]);
+// Route::get('/fetch-this-kid/{id}', [
+//     'uses' => 'API\UserController@FetchThisKid'
+// ]);
 Route::post('/fetch-this-parent', [
     'uses' => 'API\BookingsController@FetchThisParent'
 ]);
@@ -135,6 +149,9 @@ Route::post('/fetch-kids', [
 Route::post('/change-password', [
     'uses' => 'API\AuthController@changePass',
 ]);
+Route::post('/change-other-password/{id}', [
+    'uses' => 'API\AuthController@ChangeOtherPass',
+]);
 Route::delete('/logout', [
     'uses' => 'API\AuthController@destroy',
 ]);
@@ -155,4 +172,12 @@ Route::post('/set-temp-update' , [
 ]);
 Route::post('/kid-details' , [
     'uses' => 'API\SignUpController@kidDetails',
+]);
+Route::post('parents-export', [
+    'uses' => 'API\PdfController@ExportParents'
+]);
+
+
+Route::get('/gltf', [
+    'uses' => 'API\PdfController@Gltf'
 ]);

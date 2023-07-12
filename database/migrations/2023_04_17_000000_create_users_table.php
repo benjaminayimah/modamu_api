@@ -20,13 +20,15 @@ class CreateUsersTable extends Migration
             $table->boolean('email_verified')->default(false);
             $table->string('password');
             $table->enum('access_level', [0, 1, 2])->default(2);
-            $table->boolean('sub_level')->default(true);
+            $table->boolean('sub_admin')->default(false);
+            $table->enum('sub_level', [1, 2])->default(2);
             $table->enum('auth_type', [0, 1])->default(0);
             $table->string('phone')->nullable();
             $table->string('emergency_number')->nullable();
             $table->string('image')->nullable();
             $table->string('ocupation')->nullable();
             $table->string('address')->nullable();
+            $table->string('zipcode')->nullable();
             $table->string('latitude')->nullable();
             $table->string('longitude')->nullable();
             $table->string('relationship')->nullable();

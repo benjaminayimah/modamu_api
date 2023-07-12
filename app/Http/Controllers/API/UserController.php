@@ -3,17 +3,13 @@
 namespace App\Http\Controllers\API;
 
 use App\Attendee;
-use App\Booking;
-use App\Event;
 use App\Http\Controllers\Controller;
-use App\Image;
 use App\Kid;
+use App\Message;
 use App\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
-use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 class UserController extends Controller
@@ -32,9 +28,12 @@ class UserController extends Controller
         $bookings = array();
         $parents = array();
         $kids = array();
-        $waitlist = [];
+        $waitlist = array();
+        $hobbies = array();
+        $allergies = array();
+        $illnesses = array();
 
-        try {            
+        try {        
             if($user->access_level == '1') { // Village user
                 $events = DB::table('events')
                     ->join('users', 'events.user_id', '=', 'users.id')
@@ -57,6 +56,9 @@ class UserController extends Controller
                     ->select('users.name', 'users.image', 'events.*')
                     ->get();
                 $kids = User::find($user->id)->getKids;
+                $hobbies = User::find($user->id)->getHobbies;
+                $illnesses = User::find($user->id)->getIllnesses;
+                $allergies = User::find($user->id)->getAllergies;
                 foreach ($events as $event) {
                     $images_ = DB::table('images')->where(['event_id' => $event->id])->first();
                     if(isset($images_)){
@@ -79,6 +81,8 @@ class UserController extends Controller
                     ->select('kids.user_id', 'kids.photo')
                     ->get();
             }
+            $messages =  $this->getMessages($user);
+            $notifications = User::find($user->id)->getNotifications;
             return response()->json([
                 'user' => $user,
                 'events' => $events,
@@ -88,7 +92,12 @@ class UserController extends Controller
                 'villages' => $villages,
                 'bookings' => $bookings,
                 'parents' => $parents,
-                'waitlist' => $waitlist
+                'waitlist' => $waitlist,
+                'messages' => $messages,
+                'notifications' => $notifications,
+                'hobbies' => $hobbies,
+                'illnesses' => $illnesses,
+                'allergies' => $allergies
             ], 200);
         } catch (\Throwable $th) {
             return response()->json([
@@ -96,6 +105,43 @@ class UserController extends Controller
                 'status' => 'Token error.'
             ], 500);
         }
+    }
+    public function fetchMessages() {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        return response()->json($this->getMessages($user), 200);
+    }
+    public function getMessages($user) {
+        $messages = array();
+        if($user->access_level == 1 || $user->access_level == 0) { // Village user
+            $my_messages = User::find($user->id)->getMessages()->orderBy('id', 'DESC')->get();
+            foreach ($my_messages as $message) {
+                $sender = DB::table('users')->where('id', $message->to)->first();
+                $new_message = new Message();
+                $new_message->message = $message;
+                $new_message->sender = $sender;
+                $new_message->unread = $this->count_unread($message->id, $user->id);
+                array_push($messages, $new_message);
+            }
+        }elseif($user->access_level == 2) { //Parent user
+            $my_messages = DB::table('messages')->where('to', $user->id)->get();
+            foreach ($my_messages as $message) {
+                $sender = DB::table('users')->where('id', $message->user_id)->first();
+                $new_message = new Message();
+                $new_message->message = $message;
+                $new_message->sender = $sender;
+                $new_message->unread = $this->count_unread($message->id, $user->id);
+                array_push($messages, $new_message);
+            }
+        }
+        return $messages;
+    }
+    public function count_unread($id, $user_id) {
+        return Message::find($id)->getChats()
+            ->where('read', false)
+            ->where('user_id', '!=', $user_id)
+            ->count();
     }
     public function fetchKids(Request $request) {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
@@ -127,28 +173,28 @@ class UserController extends Controller
         if (!$user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
-        $id = $request->id;
-        $kids = [];
-        $thisUser = User::where('id', $id)->first();
-        if($user->access_level != '2') {
-            $kids = Kid::where('user_id', $id)->get();
+        try {
+            $id = $request->id;
+            $kids = [];
+            $thisUser = User::where('id', $id)->first();
+            if($user->access_level != '2') {
+                $kids = Kid::where('user_id', $id)->get();
+            }
+            return response()->json([
+                'thisUser' => $thisUser,
+                'kids' => $kids
+            ], 200);
+        } catch (\Throwable $th) {
+            return response()->json([
+                'title' => 'Error!',
+                'status' => 'Token error.'
+            ], 500);
         }
-        return response()->json([
-            'thisUser' => $thisUser,
-            'kids' => $kids
-        ], 200);
     }
     public function update(Request $request)
     {
        //
     }
-
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
     public function destroy($id)
     {
         //

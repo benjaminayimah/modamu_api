@@ -13,15 +13,9 @@ use Tymon\JWTAuth\Facades\JWTAuth;
 
 class ChatController extends Controller
 {
-    // public function fetchMessages() {
-    //     if (! $user = JWTAuth::parseToken()->authenticate()) {
-    //         return response()->json(['status' => 'User not found!'], 404);
-    //     }
-    //     return response()->json($this->getMessages($user), 200);
-    // }
     public function getMessages($user) {
         $messages = array();
-        if($user->access_level == 1 || $user->access_level == 0) { // Village user
+        if($user->access_level == 0) { // admin user
             $my_messages = User::find($user->id)->getMessages()->orderBy('id', 'DESC')->get();
             foreach ($my_messages as $message) {
                 $sender = DB::table('users')->where('id', $message->to)->first();
@@ -31,8 +25,23 @@ class ChatController extends Controller
                 $new_message->unread = $this->count_unread($message->id, $user->id);
                 array_push($messages, $new_message);
             }
+        }elseif($user->access_level == 1) { // Village
+            $my_messages = User::find($user->id)->getMessages()->orderBy('id', 'DESC')->get();
+            $my_messages = DB::table('messages')->where('to', $user->id)->orWhere('user_id', $user->id)->orderBy('id', 'DESC')->get();
+            foreach ($my_messages as $message) {
+                $to = $message->to;
+                if($message->to == $user->id) {
+                    $to = $message->user_id;
+                }
+                $sender = DB::table('users')->where('id', $to)->first();
+                $new_message = new Message();
+                $new_message->message = $message;
+                $new_message->sender = $sender;
+                $new_message->unread = $this->count_unread($message->id, $user->id);
+                array_push($messages, $new_message);
+            }
         }elseif($user->access_level == 2) { //Parent user
-            $my_messages = DB::table('messages')->where('to', $user->id)->get();
+            $my_messages = DB::table('messages')->where('to', $user->id)->orderBy('id', 'DESC')->get();
             foreach ($my_messages as $message) {
                 $sender = DB::table('users')->where('id', $message->user_id)->first();
                 $new_message = new Message();
@@ -54,23 +63,48 @@ class ChatController extends Controller
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
         }
-        $chats = Message::find($id)->getChats;
-        foreach ($chats as $key) {
-            if($key->user_id != $user->id) {
-                $key->read = true;
-                $key->update();
+        $image = '';
+        $chats = array();
+        $message_id = 0;
+        $to = $user->id;
+        $sender_id = $id;
+        $image_id = $sender_id;
+        if($user->access_level == 0) {//admin
+            $to = $id;
+            $sender_id = $user->id;
+            $image_id = $id;
+        }else if($user->access_level == 1) {//village
+            $to = $id;
+            $sender_id = $user->id;
+            $image_id = $id;
+            $checkSender = DB::table('users')->where('id', $id)->first()->access_level;
+            if($checkSender == 0) {
+                $to = $user->id;
+                $sender_id = $id;
             }
         }
-        $to = Message::findOrFail($id)->user_id;
-        if($user->access_level == 1) {//village
-            $to = Message::findOrFail($id)->to;
+        $message = DB::table('messages')
+            ->where('to', $to)
+            ->where('user_id', $sender_id)
+            ->first();
+        if(isset($message)) {
+            $chats = Message::find($message->id)->getChats;
+            $message_id = $message->id;
         }
-        $to_user = User::findOrFail($to);
+        if($chats) {
+            foreach ($chats as $key) {
+                if($key->user_id != $user->id) {
+                    $key->read = true;
+                    $key->update();
+                }
+            }
+        }
+        $to_user = User::findOrFail($image_id);
         $image = $to_user->image;
         return response()->json([
             'chats' => $chats,
             'image' => $image,
-            'id' => $id
+            'id' => $message_id
         ], 200);
     }
     public function store(Request $request)

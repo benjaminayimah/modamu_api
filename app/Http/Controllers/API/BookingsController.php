@@ -198,10 +198,13 @@ class BookingsController extends Controller
     {
         $booking->paid = true;
         $booking->update();
+        $event = Event::where('id', $booking->event_id)->first();
+        $event->limit_count = DB::raw('limit_count + 1');
+        $event->update();
+
         //send email to user
         $user = User::where('id', $booking->user_id)->first();
         $village = User::where('id', $booking->village_id)->first();
-        $event = Event::where('id', $booking->event_id)->first();
         $email = $user->email;
         $host = config('hosts.fe');
         $data = new Email();

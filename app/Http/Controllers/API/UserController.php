@@ -32,7 +32,6 @@ class UserController extends Controller
         $hobbies = array();
         $allergies = array();
         $illnesses = array();
-
         try {        
             if($user->access_level == '1') { // Village user
                 $events = DB::table('events')
@@ -114,7 +113,7 @@ class UserController extends Controller
     }
     public function getMessages($user) {
         $messages = array();
-        if($user->access_level == 1 || $user->access_level == 0) { // Village user
+        if($user->access_level == 0) { // admin user
             $my_messages = User::find($user->id)->getMessages()->orderBy('id', 'DESC')->get();
             foreach ($my_messages as $message) {
                 $sender = DB::table('users')->where('id', $message->to)->first();
@@ -124,8 +123,23 @@ class UserController extends Controller
                 $new_message->unread = $this->count_unread($message->id, $user->id);
                 array_push($messages, $new_message);
             }
+        }elseif($user->access_level == 1) { // Village
+            $my_messages = User::find($user->id)->getMessages()->orderBy('id', 'DESC')->get();
+            $my_messages = DB::table('messages')->where('to', $user->id)->orWhere('user_id', $user->id)->orderBy('id', 'DESC')->get();
+            foreach ($my_messages as $message) {
+                $to = $message->to;
+                if($message->to == $user->id) {
+                    $to = $message->user_id;
+                }
+                $sender = DB::table('users')->where('id', $to)->first();
+                $new_message = new Message();
+                $new_message->message = $message;
+                $new_message->sender = $sender;
+                $new_message->unread = $this->count_unread($message->id, $user->id);
+                array_push($messages, $new_message);
+            }
         }elseif($user->access_level == 2) { //Parent user
-            $my_messages = DB::table('messages')->where('to', $user->id)->get();
+            $my_messages = DB::table('messages')->where('to', $user->id)->orderBy('id', 'DESC')->get();
             foreach ($my_messages as $message) {
                 $sender = DB::table('users')->where('id', $message->user_id)->first();
                 $new_message = new Message();

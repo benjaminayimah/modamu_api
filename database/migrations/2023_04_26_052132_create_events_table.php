@@ -22,6 +22,7 @@ class CreateEventsTable extends Migration
             $table->string('longitude')->nullable();
             $table->string('amount');
             $table->string('limit')->nullable();
+            $table->unsignedInteger('limit_count')->default(0);
             $table->string('date');
             $table->string('start_time');
             $table->string('end_time');

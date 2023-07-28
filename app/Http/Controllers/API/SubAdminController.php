@@ -87,6 +87,9 @@ class SubAdminController extends Controller
             $admin->sub_admin = true;
             $admin->sub_level = $request['user'];
             $admin->save();
+            $access = new AdminAccess();
+            $access->user_id = $admin->id;
+            $access->save();
             if($request['sendEmail']) {
             //Send email
                 $data = new Email();
@@ -131,7 +134,7 @@ class SubAdminController extends Controller
                 $update->villages = $request['villages'];
                 $update->parents = $request['parents'];
                 $update->kids = $request['kids'];
-                $update->notifications = $request['notifications'];
+                // $update->notifications = $request['notifications'];
                 $update->messages = $request['messages'];
                 $update->bookings = $request['bookings'];
                 $update->update();
@@ -152,7 +155,7 @@ class SubAdminController extends Controller
         $access->villages = $request['villages'];
         $access->parents = $request['parents'];
         $access->kids = $request['kids'];
-        $access->notifications = $request['notifications'];
+        // $access->notifications = $request['notifications'];
         $access->messages = $request['messages'];
         $access->bookings = $request['bookings'];
         $access->save();

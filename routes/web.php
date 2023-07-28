@@ -36,7 +36,7 @@ Route::get('/', function () {
 // Route::get('/dropoff-pickup', function () {
 //     return view('emails.dropOffPickUp');
 // });
-// Route::get('/account-is-ready', function () {
-//     return view('emails.adminSendLoginDetails');
-// });
-Route::get('/view-pdf', [MeController::class, 'me']);
+Route::get('/bulk-message', function () {
+    return view('emails.bulkMessage');
+});
+// Route::get('/view-pdf', [MeController::class, 'me']);

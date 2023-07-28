@@ -88,7 +88,7 @@ class SignUpController extends Controller
     public function parentDetails(Request $request)
     {
         $this->validate($request, [
-            'phone' => 'required',
+            'phone_number' => 'required',
             'relationship' => 'required',
         ]);
         if (! $user = JWTAuth::parseToken()->authenticate()) {
@@ -97,7 +97,7 @@ class SignUpController extends Controller
         try {
             $id = $user->id;
             $user = User::findOrFail($id);
-            $user->phone = $request['phone'];
+            $user->phone = $request['phone_number'];
             $user->emergency_number = $request['emergency_number'];
             $user->relationship = $request['relationship'];
             $user->ocupation = $request['ocupation'];
@@ -283,7 +283,7 @@ class SignUpController extends Controller
             $newVillage = new User();
             $newVillage->name = $request['village_name'];
             $newVillage->email = $email;
-            $newVillage->phone = $request['phone'];
+            $newVillage->phone = $request['phone_number'];
             $newVillage->address = $request['address'];
             $newVillage->latitude = $request['latitude'];
             $newVillage->longitude = $request['longitude'];

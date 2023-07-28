@@ -20,7 +20,7 @@ class CreateAdminAccessesTable extends Migration
             $table->boolean('villages')->default(false);
             $table->boolean('parents')->default(false);
             $table->boolean('kids')->default(false);
-            $table->boolean('notifications')->default(false);
+            // $table->boolean('notifications')->default(false);
             $table->boolean('messages')->default(false);
             $table->boolean('bookings')->default(false);
             $table->timestamps();

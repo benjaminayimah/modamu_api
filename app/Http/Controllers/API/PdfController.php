@@ -75,25 +75,25 @@ class PdfController extends Controller
         // Return the file response
         return response()->json($filePath, 200);
 
-    //     $path = storage_path('app/public/models');
-    //     if(!is_dir($path)) {
-    //         return response()->json('folder not found', 404);
-    //     }
-    //     $files = glob("$path/*");
+        $path = storage_path('app/public/models');
+        if(!is_dir($path)) {
+            return response()->json('folder not found', 404);
+        }
+        $files = glob("$path/*");
 
-    // // Prepare the response
-    // $response = [];
+    // Prepare the response
+    $response = [];
 
-    // foreach ($files as $file) {
-    //     $filename = basename($file);
-    //     $fileContent = file_get_contents($file);
+    foreach ($files as $file) {
+        $filename = basename($file);
+        $fileContent = file_get_contents($file);
 
-    //     $response[] = [
-    //         'filename' => $filename,
-    //         'content' => base64_encode($fileContent),
-    //     ];
-    // }
-    // return response()->json($response);
+        $response[] = [
+            'filename' => $filename,
+            'content' => base64_encode($fileContent),
+        ];
+    }
+    return response()->json($response);
 
     }
 

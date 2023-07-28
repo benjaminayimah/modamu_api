@@ -3,11 +3,16 @@
 namespace App\Http\Controllers\API;
 
 use App\Chat;
+use App\Email;
 use App\Http\Controllers\Controller;
+use App\Mail\MessageFromModamu;
+use App\Mail\YouHaveANewMessage;
 use App\Message;
 use App\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
 
@@ -78,9 +83,11 @@ class ChatController extends Controller
             $sender_id = $user->id;
             $image_id = $id;
             $checkSender = DB::table('users')->where('id', $id)->first()->access_level;
-            if($checkSender == 0) {
-                $to = $user->id;
-                $sender_id = $id;
+            if(isset($checkSender)) {
+                if($checkSender == 0) {
+                    $to = $user->id;
+                    $sender_id = $id;
+                }
             }
         }
         $message = DB::table('messages')
@@ -116,6 +123,9 @@ class ChatController extends Controller
             $msg_id = $request['message_id'];
             $to_id = $request['to'];
             $chat = $request['chat'];
+            $sender = $user->name;
+            $diff = 0;
+            $email = DB::table('users')->where('id', $to_id)->first()->email;
             $messages = array();
             if($msg_id == 0) {//new
                 $message = new Message();
@@ -124,28 +134,71 @@ class ChatController extends Controller
                 $message->preview = $chat;
                 $message->save();
                 $messages = $this->getMessages($user);
+                                
             }else {//update
                 $message = Message::findOrFail($msg_id);
+                $last_time = $message->updated_at;
                 $message->preview = $chat;
+                $message->updated_at = Carbon::now();
                 $message->update();
+                // send email if interval between last mess and now > 30mins
+                $diff = $last_time->diffInMinutes(Carbon::now());
             }
             $newChat = new Chat();
             $newChat->message_id = $message->id;
             $newChat->user_id = $user->id;
             $newChat->chat = $chat;
             $newChat->save();
+
+            if($msg_id == 0) {
+                $this->sendEmail($email, $sender, $chat);
+            }else {
+                if($diff >= 30) {
+                    $this->sendEmail($email, $sender, $chat);
+                }
+            }
             return response()->json([
                 'chat' => $newChat,
                 'message' => $message,
                 'messages' => $messages
             ]);
         } catch (\Throwable $th) {
-            return response()->json('Error', 500);
+            return response()->json('An error has occurred', 500);
         }
     }
-    public function update(Request $request, $id)
+    public function sendEmail($email, $sender, $chat)
     {
-        //
+        $data = new Email();
+        $data->sender = $sender;
+        $data->chat = $chat;
+        $data->hideme = Carbon::now();
+        $data->url = config('hosts.fe');
+        Mail::to($email)->send(new YouHaveANewMessage($data));
+    }
+    public function SendBulkMessage(Request $request) {
+        if (! $user = JWTAuth::parseToken()->authenticate()) {
+            return response()->json(['status' => 'User not found!'], 404);
+        }
+        try {
+            $subject = $request['subject'];
+            $message = $request['message'];
+            $recipients = $request['recipients'];
+            foreach ($recipients as $value) {
+                $this->sendBulkEmail($value['email'], $subject, $message, $user->name);
+            }
+            return response()->json('Message sent', 200);
+        } catch (\Throwable $th) {
+            return response()->json('Error sending message', 500);
+        }
+    }
+    public function sendBulkEmail($email, $subject, $body, $sender)
+    {
+        $data = new Email();
+        $data->subject = $subject;
+        $data->body = $body;
+        $data->sender = $sender;
+        $data->hideme = Carbon::now();
+        Mail::to($email)->send(new MessageFromModamu($data));
     }
 
     /**

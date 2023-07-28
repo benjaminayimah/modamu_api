@@ -29,7 +29,7 @@ class EventBooked extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.eventBooked')->with([
+        return $this->subject('An event is booked at your village!')->view('emails.eventBooked')->with([
             'name' => $this->order->name,
             'url' => $this->order->url,
             'hideme' => $this->order->hideme

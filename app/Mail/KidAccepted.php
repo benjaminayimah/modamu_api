@@ -29,7 +29,7 @@ class KidAccepted extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.kidAccepted')->with([
+        return $this->subject('Your child is accepted!')->view('emails.kidAccepted')->with([
             'name' => $this->data->name,
             'url' => $this->data->url,
             'hideme' => $this->data->hideme

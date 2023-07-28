@@ -29,7 +29,7 @@ class DropOff extends Mailable
      */
     public function build()
     {
-        return $this->view('emails.dropOff')->with([
+        return $this->subject('Your child has been dropped off!')->view('emails.dropOff')->with([
             'name' => $this->data->name,
             'title' => $this->data->title,
             'body' => $this->data->body,

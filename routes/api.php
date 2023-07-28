@@ -41,15 +41,18 @@ Route::apiResources([
     'sub-admin' => 'API\SubAdminController',
 
 ]);
+Route::post('/send-bulk-message', [
+    'uses' => 'API\ChatController@SendBulkMessage',
+]);
 Route::delete('/remove-village-allocation/{id}' , [
     'uses' => 'API\SubAdminController@RemoveVillageAllocation',
 ]);
 Route::post('/access-control-update', [
     'uses' => 'API\SubAdminController@UpdateAccessControl'
 ]);
-Route::post('/access-control', [
-    'uses' => 'API\SubAdminController@AccessControl'
-]);
+// Route::post('/access-control', [
+//     'uses' => 'API\SubAdminController@AccessControl'
+// ]);
 Route::post('/allocate-village', [
     'uses' => 'API\SubAdminController@AllocateVillage'
 ]);

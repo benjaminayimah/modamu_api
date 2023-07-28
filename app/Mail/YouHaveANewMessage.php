@@ -7,7 +7,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
 use Illuminate\Queue\SerializesModels;
 
-class PickUp extends Mailable
+class YouHaveANewMessage extends Mailable
 {
     use Queueable, SerializesModels;
     public $data;
@@ -29,11 +29,11 @@ class PickUp extends Mailable
      */
     public function build()
     {
-        return $this->subject('Your child has been picked up!')->view('emails.pickUp')->with([
-            'name' => $this->data->name,
-            'title' => $this->data->title,
-            'body' => $this->data->body,
-            'hideme' => $this->data->hideme
+        return $this->view('emails.newMessage')->with([
+            'url' => $this->data->url,
+            'sender' => $this->data->sender,
+            'chat' => $this->data->chat,
+            'hideme' => $this->data->hideme,
         ]);
     }
 }

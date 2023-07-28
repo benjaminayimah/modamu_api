@@ -3,6 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $subject }}</title>
 </head>
 <body>
 <style>
@@ -26,19 +27,16 @@
                                     </p>
                                     <div style="padding: 12px 0">
                                         <span style="color: #0173FF;font-weight: 600; font-size: 25px; display:inline-block">
-                                            {{ $title }}
+                                            {{ $subject }}
                                         </span>
                                     </div>
                                     <div style="color: rgb(34, 34, 34);">
-                                        <p>
-                                            <strong>Dear {{ $name }},</strong>
-                                        </p>
                                         <p>
                                             {{ $body }}
                                         </p>
                                         <p style="margin-top: 32px">
                                             Best regards.<br/>
-                                            Modamu Team.
+                                            {{ $sender }}.
                                         </p>
                                     </div>
                                 </div>
@@ -51,7 +49,7 @@
                                         <p>
                                             <div>© 2023 Modamu. All Rights Reserved.</div>
                                         </p>
-                                        <span style="opacity: 0">{{ $hideme }} </span>
+                                        <span style="opacity: 0">{{ $hideme ?? '' }}</span>
                                     </div>
                                 </div>
                             </td>

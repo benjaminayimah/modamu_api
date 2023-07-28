@@ -45,8 +45,9 @@ class UserController extends Controller
                     ->join('users', 'bookings.user_id', '=', 'users.id')
                     ->where('bookings.village_id', $user->id)
                     ->where('bookings.paid', true)
-                    ->select('users.name', 'users.image', 'users.id')
+                    ->select('users.id', 'users.email', 'users.name', 'users.image')
                     ->get();
+                $parents = collect($bookings)->unique('id')->values()->all();
                 $waitlist = (new Attendee)->villageAttendees($user->id, false);
             }elseif($user->access_level == '2') { //Parent user
                 $events = DB::table('events')
@@ -65,14 +66,28 @@ class UserController extends Controller
                     }
                 }                
             }elseif ($user->access_level == '0') { //Admin user
-                $villages = User::where('access_level', '1')->orderBy('id', 'DESC')->get();
+                if($user->sub_admin && $user->sub_level == '2') {
+                    $villages = DB::table('village_accesses')
+                        ->leftJoin('users', 'village_accesses.village_id', '=', 'users.id')
+                        ->where('village_accesses.user_id', $user->id)
+                        ->get();
+                }else {
+                    $villages = User::where('access_level', '1')->orderBy('id', 'DESC')->get();
+                    $parents = User::where('access_level', '2')->orderBy('id', 'DESC')->get();
+                }
+                if($user->sub_admin && $user->sub_level == '1') {
+                    $user = DB::table('users')
+                    ->join('admin_accesses', 'users.id', '=', 'admin_accesses.user_id')
+                    ->where('users.id', $user->id)
+                    ->select('users.*', 'admin_accesses.events', 'admin_accesses.villages', 'admin_accesses.parents', 'admin_accesses.kids', 'admin_accesses.notifications', 'admin_accesses.messages', 'admin_accesses.bookings')
+                    ->first();
+                }
                 $bookings = DB::table('bookings')
                     ->join('users', 'bookings.village_id', '=', 'users.id')
                     ->where('bookings.paid', true)
                     ->select('users.name', 'users.image', 'bookings.*')
                     ->orderBy('id', 'DESC')
                     ->get();
-                $parents = User::where('access_level', '2')->orderBy('id', 'DESC')->get();
                 $kids = Kid::all();
                 $attendees = DB::table('attendees')
                     ->join('kids', 'attendees.kid_id', '=', 'kids.id')

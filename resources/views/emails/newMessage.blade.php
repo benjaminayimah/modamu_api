@@ -25,19 +25,28 @@
                                         </a>
                                     </p>
                                     <div style="padding: 12px 0">
-                                        <span style="color: #0173FF;font-weight: 600; font-size: 25px; display:inline-block">
-                                            {{ $title }}
+                                        <span style="padding-bottom: 6px; font-weight: 600; font-size: 25px; display:inline-block">
+                                            New message from Modamu
                                         </span>
                                     </div>
+                                    <table style="width:100%">
+                                        <tbody>
+                                            <tr style="color: rgb(34, 34, 34);">
+                                                <td>
+                                                    <span style="font-size:20px">{{ $sender }} wrote,</span>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 20px;border: 1px solid #eee;">{{ $chat }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
                                     <div style="color: rgb(34, 34, 34);">
                                         <p>
-                                            <strong>Dear {{ $name }},</strong>
-                                        </p>
-                                        <p>
-                                            {{ $body }}
+                                            <a href="{{ $url }}" target="_blank" class="btn" style="background-color: #0173FF; border-radius: 18px; text-align: center; color:#fff; display:block; padding: 14px 24px; text-decoration: none; margin: 32px 24px">View message details</a>
                                         </p>
                                         <p style="margin-top: 32px">
-                                            Best regards.<br/>
+                                            Best regards!<br/>
                                             Modamu Team.
                                         </p>
                                     </div>

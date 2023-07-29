@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\API;
 
 use App\AdminAccess;
+use App\Chat;
 use App\Email;
 use App\Http\Controllers\Controller;
 use App\Mail\YourAccountIsReady;
+use App\Message;
 use App\User;
 use App\VillageAccess;
 use Illuminate\Http\Request;
@@ -85,6 +87,7 @@ class SubAdminController extends Controller
             $admin->password = bcrypt($request['password']);
             $admin->access_level = '0';
             $admin->sub_admin = true;
+            $admin->email_verified = true;
             $admin->sub_level = $request['user'];
             $admin->save();
             $access = new AdminAccess();
@@ -107,20 +110,20 @@ class SubAdminController extends Controller
             ], 500);
         }
     }
-    public function AccessControl(Request $request)
-    {
-        if (! $user = JWTAuth::parseToken()->authenticate()) {
-            return response()->json(['status' => 'User not found!'], 404);
-        }
-        try {
-            return response()->json($this->SaveNewAccess($request), 200);
+    // public function AccessControl(Request $request)
+    // {
+    //     if (! $user = JWTAuth::parseToken()->authenticate()) {
+    //         return response()->json(['status' => 'User not found!'], 404);
+    //     }
+    //     try {
+    //         return response()->json($this->SaveNewAccess($request), 200);
 
-        } catch (\Throwable $th) {
-            return response()->json([
-                'title' => 'Error!'
-            ], 500);
-        }
-    }
+    //     } catch (\Throwable $th) {
+    //         return response()->json([
+    //             'title' => 'Error!'
+    //         ], 500);
+    //     }
+    // }
     public function UpdateAccessControl(Request $request) {
         if (! $user = JWTAuth::parseToken()->authenticate()) {
             return response()->json(['status' => 'User not found!'], 404);
@@ -188,6 +191,19 @@ class SubAdminController extends Controller
             if (Storage::disk('public')->exists($id)) {
                 Storage::deleteDirectory('public/'.$id);
             }
+            $messages = Message::where('user_id', $id)
+                ->orWhere('to', $id)
+                ->get();
+            foreach ($messages as $value) {
+                $chats = Chat::where('message_id', $value->id)->get();
+                if($chats) {
+                    foreach ($chats as $chat) {
+                        $chat->delete();
+                    }
+                }
+                $value->delete();
+            }
+
             $admin->delete();
             return response()->json([
                 'id' => $id,

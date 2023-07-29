@@ -32,7 +32,9 @@ class UserController extends Controller
         $hobbies = array();
         $allergies = array();
         $illnesses = array();
-        try {        
+        try {
+            $messages =  $this->getMessages($user);
+            $notifications = User::find($user->id)->getNotifications;
             if($user->access_level == '1') { // Village user
                 $events = DB::table('events')
                     ->join('users', 'events.user_id', '=', 'users.id')
@@ -95,8 +97,6 @@ class UserController extends Controller
                     ->select('kids.user_id', 'kids.photo')
                     ->get();
             }
-            $messages =  $this->getMessages($user);
-            $notifications = User::find($user->id)->getNotifications;
             return response()->json([
                 'user' => $user,
                 'events' => $events,

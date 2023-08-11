@@ -39,4 +39,4 @@ Route::get('/', function () {
 Route::get('/bulk-message', function () {
     return view('emails.bulkMessage');
 });
-// Route::get('/view-pdf', [MeController::class, 'me']);
+Route::get('/view-pdf', [MeController::class, 'me']);

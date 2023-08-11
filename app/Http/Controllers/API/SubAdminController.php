@@ -90,9 +90,11 @@ class SubAdminController extends Controller
             $admin->email_verified = true;
             $admin->sub_level = $request['user'];
             $admin->save();
-            $access = new AdminAccess();
-            $access->user_id = $admin->id;
-            $access->save();
+            if($request['user'] == '1') {
+                $access = new AdminAccess();
+                $access->user_id = $admin->id;
+                $access->save();
+            }
             if($request['sendEmail']) {
             //Send email
                 $data = new Email();

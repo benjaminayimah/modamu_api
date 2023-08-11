@@ -80,8 +80,8 @@ class UserController extends Controller
                 if($user->sub_admin && $user->sub_level == '1') {
                     $user = DB::table('users')
                     ->join('admin_accesses', 'users.id', '=', 'admin_accesses.user_id')
-                    ->where('users.id', $user->id)
-                    ->select('users.*', 'admin_accesses.events', 'admin_accesses.villages', 'admin_accesses.parents', 'admin_accesses.kids', 'admin_accesses.notifications', 'admin_accesses.messages', 'admin_accesses.bookings')
+                    ->where('admin_accesses.user_id', $user->id)
+                    ->select('users.*', 'admin_accesses.events', 'admin_accesses.villages', 'admin_accesses.parents', 'admin_accesses.kids', 'admin_accesses.messages', 'admin_accesses.bookings')
                     ->first();
                 }
                 $bookings = DB::table('bookings')

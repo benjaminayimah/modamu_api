@@ -78,9 +78,6 @@ Route::post('/cancel-booking', [
 Route::post('/verify-user-account', [
     'uses' => 'API\SignUpController@VerifyAccount'
 ]);
-// Route::post('/make-payment', [
-//     'uses' => 'API\StripeController@CheckOut'
-// ]);
 Route::delete('/delete-registered-finish-event/{id}', [
     'uses' => 'API\EventController@DeleteRegisteredFinishedEvent'
 ]);

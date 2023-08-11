@@ -48,7 +48,16 @@ class BookingsController extends Controller
         $quantity = count($kid_array);
         $amount = $event->amount;
         $total_amount = $quantity * $amount;
-        $name = 'Paying for the event: '.$event->event_name;
+        $name = 'Payment for the event: '.$event->event_name;
+        $spot_left = $event->limit - $event->limit_count;
+
+        if($quantity > $spot_left) {
+            $spot = 'spot';
+            if($spot_left > 1) {
+                $spot = 'spots';
+            }
+            return response()->json('Sorry, we only have '.$spot_left.' '.$spot.' left' , 404);
+        }
         try {
             //make payment
             \Stripe\Stripe::setApiKey(config('stripe.sk'));
@@ -64,8 +73,8 @@ class BookingsController extends Controller
                 'quantity' => 1,
                 ]],
                 'mode' => 'payment',
-                'success_url' => $request['url'].'/success/{CHECKOUT_SESSION_ID}',
-                'cancel_url' => $request['url'].'/canceled/{CHECKOUT_SESSION_ID}',
+                'success_url' => config('hosts.fe').'/booking-event/success/{CHECKOUT_SESSION_ID}',
+                'cancel_url' => config('hosts.fe').'/booking-event/canceled/{CHECKOUT_SESSION_ID}',
             ]);
             //place temp booking
             $receipt_no = rand(1111111111,9999999999);
@@ -199,7 +208,7 @@ class BookingsController extends Controller
         $booking->paid = true;
         $booking->update();
         $event = Event::where('id', $booking->event_id)->first();
-        $event->limit_count = DB::raw('limit_count + 1');
+        $event->limit_count = DB::raw('limit_count + '.$booking->number_of_kids);
         $event->update();
 
         //send email to user

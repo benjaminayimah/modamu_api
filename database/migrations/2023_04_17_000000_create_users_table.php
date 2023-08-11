@@ -21,7 +21,7 @@ class CreateUsersTable extends Migration
             $table->string('password');
             $table->enum('access_level', [0, 1, 2])->default(2);
             $table->boolean('sub_admin')->default(false);
-            $table->enum('sub_level', [1, 2])->default(2);
+            $table->enum('sub_level', [1, 2])->nullable();
             $table->enum('auth_type', [0, 1])->default(0);
             $table->string('phone')->nullable();
             $table->string('emergency_number')->nullable();

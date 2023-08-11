@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $subject }}</title>
+    <title>{{ $subject ?? '' }}</title>
 </head>
 <body>
 <style>
@@ -27,16 +27,16 @@
                                     </p>
                                     <div style="padding: 12px 0">
                                         <span style="color: #0173FF;font-weight: 600; font-size: 25px; display:inline-block">
-                                            {{ $subject }}
+                                            {{ $subject ?? '' }}
                                         </span>
                                     </div>
                                     <div style="color: rgb(34, 34, 34);">
                                         <p>
-                                            {{ $body }}
+                                            {{ $body ?? '' }}
                                         </p>
                                         <p style="margin-top: 32px">
                                             Best regards.<br/>
-                                            {{ $sender }}.
+                                            {{ $sender ?? '' }}.
                                         </p>
                                     </div>
                                 </div>
